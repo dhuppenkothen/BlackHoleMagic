@@ -1,4 +1,5 @@
 ### Random utility function for GRS 1915 Analysis Stuff
+import numpy as np
 
 def extract_segments(d_all, seg_length = 256., overlap=64.):
     """ Extract light curve segmens from a list of light curves. 
@@ -46,7 +47,3 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
             j+=1
         
     return segments, labels
-    
-    
-
-
