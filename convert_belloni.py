@@ -17,6 +17,36 @@ def convert_obsids(states):
     return states_new
 
 
+
+def convert_belloni_clean(turned=True):
+    ## cleaned version; without observations that have light curves
+    ## with more than one class
+    file = open("1915Belloniclass.dat")
+    lines = file.readlines()
+    header = lines[0].split()
+    belloni_clean = {}
+    for h,l in zip(header, lines[1:]):
+        belloni_clean[h] = l.split()
+    
+    if turned:
+        belloni_clean_turned = turn_states(belloni_clean)
+        return belloni_clean_turned
+    else:
+        return belloni_clean
+    
+## turn around conversion (just in case):
+def turn_states(states, remove_dashes = False):
+    turned_states = {}
+    for k,lis in states.iteritems():
+        for l in lis:
+            if remove_dashes:
+                turned_states[l.translate(None, "-")] = k
+            else:
+                turned_states[l] = k
+    return turned_states
+
+
+
 def main():
     alpha_state = ["J-01-00","J-01-01","J-02-00","K-22-00","K-23-00", "K-24-01","K-26-00","K-27-00",
          "K-28-00", "K-30-01", "K-30-02"]
