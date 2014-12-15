@@ -269,6 +269,23 @@ def hr_maps(seg, hr_limits, bins=30):
     
     return xedges, yedges, h
 
+
+def hr_fitting(seg):
+    times = seg[:,0]
+    counts = seg[:,1]
+    low_counts = seg[:,2]
+    high_counts = seg[:,3]
+    hr1 = low_counts/counts
+    hr2 = high_counts/counts
+
+    # compute the robust statistics
+    (mu_r, sigma1_r,
+     sigma2_r, alpha_r) = astroml.stats.fit_bivariate_normal(hr1, hr2, robust=True)
+
+    return mu_r, sigma1_r, sigma2_r, alpha_r
+    
+
+
 def lcshape_features(seg, dt=1.0):
     
     times = seg[:,0]
@@ -315,8 +332,9 @@ def make_features(seg, bins=30, navg=4, lc=True, hr=True):
         #lc = lcshape_features(s, dt=1.0)
         #features_temp.extend(lc)
         
-        xedges, yedges, h = hr_maps(s, hr_limits, bins=bins)
-        features_temp.extend(h.flatten())
+        #xedges, yedges, h = hr_maps(s, hr_limits, bins=bins)
+        mu, sigma1, sigma2, alpha = hr_fitting(s)
+        features_temp.extend([mu, sigma1, sigma2, alpha])
 
         features.append(features_temp)
         
