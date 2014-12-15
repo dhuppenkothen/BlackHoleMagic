@@ -4,6 +4,7 @@ import numpy as np
 import glob
 import cPickle as pickle
 import pandas as pd
+import astroML.stats
 
 import powerspectrum
 
@@ -280,7 +281,7 @@ def hr_fitting(seg):
 
     # compute the robust statistics
     (mu_r, sigma1_r,
-     sigma2_r, alpha_r) = astroml.stats.fit_bivariate_normal(hr1, hr2, robust=True)
+     sigma2_r, alpha_r) = astroML.stats.fit_bivariate_normal(hr1, hr2, robust=True)
 
     return mu_r, sigma1_r, sigma2_r, alpha_r
     
