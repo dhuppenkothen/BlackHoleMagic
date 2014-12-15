@@ -94,9 +94,9 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         #print("dt: " + str(dt))
         
         ## compute the number of time bins in a segment
-        nseg = seg_length/dt
+        nseg = int(seg_length/dt)
         ## compute the number of time bins to start of next segment
-        noverlap = overlap/dt
+        noverlap = int(overlap/dt)
         
         istart = 0
         iend = nseg
