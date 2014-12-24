@@ -5,12 +5,14 @@ import glob
 import cPickle as pickle
 import pandas as pd
 import astroML.stats
+import scipy.stats
 
+import lightcurve
 import powerspectrum
 
 
 
-def get_labelled_data(filename):
+def get_labelled_data(filename, seg_length=256., overlap=64., tres = 0.125):
  
     f = open(filename)
     d_all = pickle.load(f)
@@ -47,10 +49,18 @@ def get_labelled_data(filename):
         print(st.value_counts())
         print("================================================================")
 
-    seg_train, labels_train = extract_segments(d_all_train, seg_length=512., overlap=64.)
-    seg_val, labels_val = extract_segments(d_all_val, seg_length=512., overlap=64.)
-    seg_test, labels_test = extract_segments(d_all_test, seg_length=512., overlap=64.)
- 
+    if seg_length is not None:
+        seg_train, labels_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
+        seg_val, labels_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
+        seg_test, labels_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
+    else:
+        seg_train = [d[0] for d in d_all_train] 
+        seg_val = [d[0] for d in d_all_val]
+        seg_test = [d[0] for d in d_all_test]
+        labels_train = [d[1] for d in d_all_train]
+        labels_val = [d[1] for d in d_all_val]
+        labels_test = [d[1] for d in d_all_test]
+
     ## Let's print some details on the different segment data sets
     print("There are %i segments in the training set."%len(seg_train))
     print("There are %i segments in the validation set."%len(seg_val))
@@ -62,58 +72,6 @@ def get_labelled_data(filename):
         print("================================================================")
 
     return [seg_train, labels_train], [seg_val, labels_val], [seg_test, labels_test]
-
-
-## This function is also in grs1915_utils.py!
-def extract_segments(d_all, seg_length = 256., overlap=64.):
-    """ Extract light curve segmens from a list of light curves. 
-        Each element in the list is a list with two elements: 
-        - an array that contains the light curve in three energy bands 
-        (full, low energies, high energies) and 
-        - a string containing the state of that light curve.
-        
-        The parameters are 
-        - seg_length: the length of each segment. Bits of data at the end of a light curve
-        that are smaller than seg_length will not be included. 
-        - overlap: This is actually the interval between start times of individual segments,
-        i.e. by default light curves start 64 seconds apart. The actual overlap is 
-        seg_length-overlap
-    """
-    segments, labels = [], [] ## labels for labelled data
-        
-    for i,d_seg in enumerate(d_all):
-        
-        ## data is an array in the first element of d_seg
-        data = d_seg[0]
-        ## state is a string in the second element of d_seg
-        state = d_seg[1]
-
-        ## compute the intervals between adjacent time bins
-        dt_data = data[1:,0] - data[:-1,0]
-        dt = np.min(dt_data)
-        #print("dt: " + str(dt))
-        
-        ## compute the number of time bins in a segment
-        nseg = int(seg_length/dt)
-        ## compute the number of time bins to start of next segment
-        noverlap = int(overlap/dt)
-        
-        istart = 0
-        iend = nseg
-        j = 0
-     
-        while iend <= len(data):
-            dtemp = data[istart:iend]
-            segments.append(dtemp)
-            labels.append(state)
-            istart += noverlap
-            iend += noverlap
-            j+=1
-        
-    return segments, labels
-    
-    
-    
 
 
 
@@ -139,7 +97,7 @@ def rebin_psd(freq, ps, n=10, type='average'):
     #print("n: " + str(n))
     
     nbins_new = int(len(ps)/n)
-    ps_new = ps[:nbins_new*n]
+    ps_new = ps[:nbins_new*int(n)]
     binps = np.reshape(np.array(ps_new), (nbins_new, n))
     binps = np.sum(binps, axis=1)
     if type in ["average", "mean"]:
@@ -211,16 +169,27 @@ def psd_features(seg, pcb):
     
     return maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2
 
-def total_psd(seg, navg=4):
-    times = seg[:,0]
+def total_psd(seg, bins=30):
+    times = seg[:,0]    
     dt = times[1:] - times[:-1]
     dt = np.min(dt)
-
+    #print("tseg: " + str(times[-1] - times[0]))
     counts = seg[:,1]*dt
-    #ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
-    freq, ps = make_psd(seg, navg=navg)
     
-    return ps
+    lc = lightcurve.Lightcurve(times, counts=counts, timestep = dt, tseg=np.ceil(times[-1]-times[0]), tstart=times[0])
+    ps = powerspectrum.PowerSpectrum(lc, norm="rms", )
+    #print("log(ps): " + str(np.log10(ps.freq[-1]) - np.log10(ps.freq[1])))
+
+    binfreq = np.logspace(np.log10(ps.freq[1]*0.9), np.log10(ps.freq[-1]), bins)
+    binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
+    if any(np.isnan(binps)):
+      print("freq: " + str(ps.freq[1:10])) 
+      print("bins: " + str(binfreq[:10]))
+      print("bin_edges: " + str(bin_edges[:10]))
+      print("NaN! dt: %.3f,tseg: %.3f, ps: %.3f"%(dt,(times[-1] - times[0]), (np.log10(ps.freq[-1]) - np.log10(ps.freq[1]))))
+    return binps
+
+
 
 
 def make_psd(segment, navg=1):
@@ -254,7 +223,9 @@ def make_psd(segment, navg=1):
     
         return ps.freq, ps_all
 
-hr_limits = [[0.292, 0.820],[0.046, 0.708]]
+hr_limits = [[0.292, 1.],[0.00, 0.708]]
+hid_limits = [[0.1, 1.5], [0.0, 6000.0]]
+
 
 def hr_maps(seg, hr_limits, bins=30):
     times = seg[:,0]
@@ -270,6 +241,19 @@ def hr_maps(seg, hr_limits, bins=30):
     
     return xedges, yedges, h
 
+def hid_maps(seg, hid_limits, bins=30):
+    times = seg[:,0]
+    counts = seg[:,1]
+    low_counts = seg[:,2]
+    high_counts = seg[:,3]
+    hr2 = high_counts/low_counts
+    h, xedges, yedges = np.histogram2d(hr2, counts, bins=bins, 
+                                       range=hid_limits)
+    h = np.rot90(h)
+    h = np.flipud(h)
+    
+    return xedges, yedges, h
+
 
 def hr_fitting(seg):
     times = seg[:,0]
@@ -280,11 +264,16 @@ def hr_fitting(seg):
     hr2 = high_counts/counts
 
     # compute the robust statistics
-    (mu_r, sigma1_r,
-     sigma2_r, alpha_r) = astroML.stats.fit_bivariate_normal(hr1, hr2, robust=True)
+    #(mu_r, sigma1_r, sigma2_r, alpha_r) = astroML.stats.fit_bivariate_normal(hr1, hr2, robust=False)
 
-    return mu_r, sigma1_r, sigma2_r, alpha_r
-    
+    #return mu_r, sigma1_r, sigma2_r, alpha_r
+    mu1 = np.mean(hr1)
+    mu2 = np.mean(hr2)
+    #cov = np.cov(hr1, hr2)
+    #return mu1, mu2, cov.flatten()
+    sigma1 = np.var(hr1)
+    sigma2 = np.var(hr2)
+    return mu1, mu2, sigma1, sigma2
 
 
 def lcshape_features(seg, dt=1.0):
@@ -323,19 +312,27 @@ def make_features(seg, bins=30, navg=4, lc=True, hr=True):
         features_temp.extend([fmean, fmedian, fvar])
 
         maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2 = psd_features(s, pcb)
-        
-        
-        features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
-        
-        #whole_ps = total_psd(s,navg=navg)
+        binps = total_psd(s, 10)
+	features_temp.extend(binps)         
+        #features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+	#whole_ps = total_psd(s,navg=navg)
         #features_temp.extend(whole_ps[1:])
 
         #lc = lcshape_features(s, dt=1.0)
         #features_temp.extend(lc)
-        
+         
         #xedges, yedges, h = hr_maps(s, hr_limits, bins=bins)
-        mu, sigma1, sigma2, alpha = hr_fitting(s)
-        features_temp.extend([mu, sigma1, sigma2, alpha])
+        #features_temp.extend(h.flatten())
+	 
+	xedges, yedges, h = hid_maps(s, hid_limits, bins=bins)
+	features_temp.extend(h.flatten())
+	#mu, sigma1, sigma2, alpha = hr_fitting(s)
+        #features_temp.extend([mu[0], mu[1], sigma1, sigma2, alpha])
+        #mu1, mu2, sigma1, sigma2 = hr_fitting(s)
+        #features_temp.extend([mu1, mu2, sigma1, sigma2])
+	#mu1, mu2, cov = hr_fitting(s)
+	#features_temp.extend([mu1, mu2])
+	#features_temp.extend(cov)
 
         features.append(features_temp)
         
