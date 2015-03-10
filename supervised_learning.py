@@ -53,12 +53,12 @@ def supervised_all(datadir="../"):
             print("Something's gone very wrong!")
 
 
-	run_supervised(features_all)
+    run_supervised(features_all)
 
     return
 
 def run_supervised(features_all):
-       	"""
+        """
         features_all is a dictionary that contains keywords "test", "train" and "val".
         Each keyword contains a list. The first list element is another dictionary with keywords
         "features" (containing the feature vectors), "lc" (containing the light curve) and "hr" 
@@ -94,12 +94,12 @@ def run_supervised(features_all):
         ### simplest algorithm: K-Nearest Neighbour
         params = {'n_neighbors': [1, 3, 5, 10, 15, 20, 25, 30, 50]}#, 'max_features': }
         grid = GridSearchCV(KNeighborsClassifier(), param_grid=params, verbose=10, n_jobs=10)
-        grid.fit(features_train, labels_train)
+        grid.fit(fscaled_train, labels_train)
 
         print("Best results for the K Nearest Neighbour run:")
         print("Best parameter: " + str(grid.best_params_))
-        print("Training accuracy: " + str(grid.score(features_train, labels_train)))
-        print("Validation accuracy: " + str(grid.score(features_val, labels_val)))
+        print("Training accuracy: " + str(grid.score(fscaled_train, labels_train)))
+        print("Validation accuracy: " + str(grid.score(fscaled_val, labels_val)))
 
 
         ### Random Forest Classifier
@@ -107,19 +107,19 @@ def run_supervised(features_all):
                  # 'max_features':[2,3,4,5,6,7,8,10,50,150,200,250,300]}
         grid_rfc = GridSearchCV(RandomForestClassifier(n_estimators=500), param_grid=params,
                                 verbose=10, n_jobs=10)
-        grid_rfc.fit(features_train, labels_train)
+        grid_rfc.fit(fscaled_train, labels_train)
 
         print("Best results for the Random Forest run:")
         print("Best parameter: " + str(grid_rfc.best_params_))
-        print("Training accuracy: " + str(grid_rfc.score(features_train, labels_train)))
-        print("Validation accuracy: " + str(grid_rfc.score(features_val, labels_val)))
+        print("Training accuracy: " + str(grid_rfc.score(fscaled_train, labels_train)))
+        print("Validation accuracy: " + str(grid_rfc.score(fscaled_val, labels_val)))
 
 
         ### Linear Classifier
         params = {'C': [0.001, 0.01, 0.1, 1, 10, 100]}
         grid_lm = GridSearchCV(linear_model.LogisticRegression(penalty="l2", class_weight="auto"),
                             param_grid=params, verbose=10, n_jobs=10)
-        grid_lm.fit(features_train, labels_train)
+        grid_lm.fit(fscaled_train, labels_train)
         #params = {'C': [0.001, 0.01, 0.1, 1, 10, 100]}
         #grid = GridSearchCV(LinearSVC(), param_grid=params, verbose=10)
         #grid.fit(features_train, labels_train)
@@ -127,7 +127,7 @@ def run_supervised(features_all):
 
         print("Best results for the Linear Model run:")
         print("Best parameter: " + str(grid_lm.best_params_))
-        print("Training accuracy: " + str(grid_lm.score(features_train, labels_train)))
-        print("Validation accuracy: " + str(grid_lm.score(features_val, labels_val)))
+        print("Training accuracy: " + str(grid_lm.score(fscaled_train, labels_train)))
+        print("Validation accuracy: " + str(grid_lm.score(fscaled_val, labels_val)))
 
         return grid, grid_rfc, grid_lm

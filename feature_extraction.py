@@ -220,18 +220,27 @@ def psd_features(seg, pcb):
     #ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
     freq, ps = make_psd(seg, navg=1)
     #print("len(ps), before: " + str(len(ps)))
-    if times[-1]-times[0] >= 2.*256.:
+    if times[-1]-times[0] >= 2.*128.0:
         tlen = (times[-1]-times[0])
-        nrebin = np.round(tlen/256.)
+        nrebin = np.round(tlen/128.)
         freq, ps = rebin_psd(freq, ps, n=nrebin, type='average')
 
     #print("len(ps), after: " + str(len(ps)))
 
     freq = np.array(freq[1:])
     ps = ps[1:]
+    #print("min(freq): " + str(np.min(freq)))
+    #print("max(freq): " + str(np.max(freq)))
+    #print("len(freq): " + str(len(freq)))
 
-    fmax_ind = np.where(ps == np.max(ps))[0]
-    maxfreq = freq[fmax_ind[0]]
+    binfreq, binps = total_psd(seg, 24)
+
+    #print("min(binps): " + str(np.min(binps)))
+    #print("max(binps): " + str(np.max(binps)))
+    fmax_ind = np.where(binps == np.max(binps))
+    #print("fmax_ind: " + str(fmax_ind))
+    maxfreq = binfreq[fmax_ind[0]]
+    #print("maxfreq: " + str(maxfreq))
 
     ## find power in spectral bands for power-colours
     pa_min_freq = freq.searchsorted(pcb["pa_min"])
@@ -290,6 +299,8 @@ def make_psd(segment, navg=1):
 
     return ps.freq, ps_all
 
+epsilon = 1.e-8
+
 def total_psd(seg, bins):
     times = seg[:,0]
     dt = times[1:] - times[:-1]
@@ -298,9 +309,14 @@ def total_psd(seg, bins):
 
     ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
     ps.ps = np.array(ps.freq)*np.array(ps.ps)
-    binfreq = np.logspace(np.log10(ps.freq[1]), np.log10(ps.freq[-1]), bins)
+    binfreq = np.logspace(np.log10(ps.freq[1]-epsilon), np.log10(ps.freq[-1]+epsilon), bins)
+    #print("freq: " + str(ps.freq[1:10]))
+    #print("binfreq: " + str(binfreq[:10]))
     binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
-    return binps
+    df = binfreq[1:]-binfreq[:-1]
+    binfreq = binfreq[:-1]+df/2.
+
+    return np.array(binfreq), np.array(binps)
 
 
 
@@ -422,8 +438,9 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
             features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
         else:
             ## whole PSD
-            freq, ps = make_psd(s,navg=navg)
-            features_temp.extend(ps[1:])
+            #freq, ps = make_psd(s,navg=navg)
+            binfreq, binps = total_psd(s, 24)
+            features_temp.extend(binps[1:])
 
 
         if hr_summary:
@@ -532,7 +549,8 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
 
 def extract_all(d_all, datadir="./"):
 
-    seg_length_all = [512., 1024., 2048.]
+    #seg_length_all = [512., 1024., 2048.]
+    seg_length_all = [1024.]
     overlap = 128.
     val = True
     seg = True
@@ -569,28 +587,28 @@ def extract_all(d_all, datadir="./"):
 
     for sl in seg_length_all:
 
-        #print("%i segments, summary"%int(sl))
-        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-        #          seg=True, seg_length=sl, overlap=overlap,
-        #          bins=bins, navg=navg, hr_summary=True, ps_summary=True, lc=True, hr=True,
-        #          save_features=True, fout="grs1915_%i_summary_features.dat"%int(sl))
+        print("%i segments, summary"%int(sl))
+        lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
+                  seg=True, seg_length=sl, overlap=overlap,
+                  bins=bins, navg=navg, hr_summary=True, ps_summary=True, lc=True, hr=True,
+                  save_features=True, fout=datadir+"grs1915_%i_clean_summary_features.dat"%int(sl))
 
-        #print("%i segments, hr full"%int(sl))
-        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-        #          seg=True, seg_length=sl, overlap = overlap,
-        #          bins=bins, navg=navg, hr_summary=False, ps_summary=True, lc=True, hr=True,
-        #          save_features=True, fout="grs1915_%i_hrfull_features.dat"%int(sl))
-
-        #print("%i segments, ps full"%int(sl))
-        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-        #          seg=True, seg_length=sl, overlap = overlap,
-        #          bins=bins, navg=navg, hr_summary=True, ps_summary=False, lc=True, hr=True,
-        #          save_features=True, fout="grs1915_%i_psfull_features.dat"%int(sl))
-
-        print("%i segments, ps full, HR full"%int(sl))
+        print("%i segments, hr full"%int(sl))
         lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
                   seg=True, seg_length=sl, overlap = overlap,
-                  bins=bins, navg=navg, hr_summary=False, ps_summary=False, lc=True, hr=True,
-                  save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_psfull_features.dat"%int(sl))
+                  bins=bins, navg=navg, hr_summary=False, ps_summary=True, lc=True, hr=True,
+                  save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_features.dat"%int(sl))
+
+        print("%i segments, ps full"%int(sl))
+        lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
+                  seg=True, seg_length=sl, overlap = overlap,
+                  bins=bins, navg=navg, hr_summary=True, ps_summary=False, lc=True, hr=True,
+                  save_features=True, fout=datadir+"grs1915_%i_clean_psfull_features.dat"%int(sl))
+
+        #print("%i segments, ps full, HR full"%int(sl))
+        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
+        #          seg=True, seg_length=sl, overlap = overlap,
+        #          bins=bins, navg=navg, hr_summary=False, ps_summary=False, lc=True, hr=True,
+        #          save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_psfull_features.dat"%int(sl))
 
     return
