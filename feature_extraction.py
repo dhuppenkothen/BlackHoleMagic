@@ -332,10 +332,10 @@ def hr_maps(seg, bins=30, hrlimits=None):
     times = seg[:,0]
     counts = seg[:,1]
     low_counts = seg[:,2]
-    high_counts = seg[:,3]
-
-    hr1 = np.log(low_counts/counts)
-    hr2 = np.log(high_counts/counts)
+    mid_counts = seg[:,3]
+    high_counts = seg[:,4]
+    hr1 = np.log(mid_counts/low_counts)
+    hr2 = np.log(high_counts/low_counts)
 
     if hrlimits is None:
         hr_limits = compute_hrlimits(hr1, hr2)
@@ -358,9 +358,10 @@ def hr_maps(seg, bins=30, hrlimits=None):
 def hr_fitting(seg):
     counts = seg[:,1]
     low_counts = seg[:,2]
-    high_counts = seg[:,3]
-    hr1 = low_counts/counts
-    hr2 = high_counts/counts
+    mid_counts = seg[:,3]
+    high_counts = seg[:,4]
+    hr1 = np.log(mid_counts/low_counts)
+    hr2 = np.log(high_counts/low_counts)
 
     # compute the robust statistics
     #(mu_r, sigma1_r,
@@ -370,10 +371,23 @@ def hr_fitting(seg):
     #    print("sigma1_r: " + str(sigma1_r))
     #    print("sigma2_r: " + str(sigma2_r))
     #    print("alpha_r: " + str(alpha_r))
+    hr1_mask = np.where(np.isinf(hr1) == False)
+    #print(np.where(np.isinf(hr2) == False))
+    hr1 = hr1[hr1_mask]
+    hr2 = hr2[hr1_mask]
+
+    hr2_mask = np.where(np.isinf(hr2) == False)
+    hr1 = hr1[hr2_mask]
+    hr2 = hr2[hr2_mask]
 
     mu1 = np.mean(hr1)
     mu2 = np.mean(hr2)
+
     cov = np.cov(hr1, hr2)
+
+    if np.any(np.isnan(cov)):
+        print("NaN in cov")
+
     return mu1, mu2, cov.flatten()
 #    return mu_r, sigma1_r, sigma2_r, alpha_r
 
@@ -446,7 +460,7 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
         if hr_summary:
             mu1, mu2, cov = hr_fitting(s)
             features_temp.extend([mu1, mu2])
-            features_temp.extend(cov)
+            features_temp.extend(cov.flatten())
 
         else:
             xedges, yedges, h = hr_maps(s, bins=bins, hrlimits=hrlimits)
@@ -593,17 +607,17 @@ def extract_all(d_all, datadir="./"):
                   bins=bins, navg=navg, hr_summary=True, ps_summary=True, lc=True, hr=True,
                   save_features=True, fout=datadir+"grs1915_%i_clean_summary_features.dat"%int(sl))
 
-        print("%i segments, hr full"%int(sl))
-        lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-                  seg=True, seg_length=sl, overlap = overlap,
-                  bins=bins, navg=navg, hr_summary=False, ps_summary=True, lc=True, hr=True,
-                  save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_features.dat"%int(sl))
+        #print("%i segments, hr full"%int(sl))
+        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
+        #          seg=True, seg_length=sl, overlap = overlap,
+        #          bins=bins, navg=navg, hr_summary=False, ps_summary=True, lc=True, hr=True,
+        #          save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_features.dat"%int(sl))
 
-        print("%i segments, ps full"%int(sl))
-        lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-                  seg=True, seg_length=sl, overlap = overlap,
-                  bins=bins, navg=navg, hr_summary=True, ps_summary=False, lc=True, hr=True,
-                  save_features=True, fout=datadir+"grs1915_%i_clean_psfull_features.dat"%int(sl))
+        #print("%i segments, ps full"%int(sl))
+        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
+        #          seg=True, seg_length=sl, overlap = overlap,
+        #          bins=bins, navg=navg, hr_summary=True, ps_summary=False, lc=True, hr=True,
+        #          save_features=True, fout=datadir+"grs1915_%i_clean_psfull_features.dat"%int(sl))
 
         #print("%i segments, ps full, HR full"%int(sl))
         #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,

@@ -44,7 +44,7 @@
 
 \begin{document}
 
-\title{Dissecting Magnetar Variability with Bayesian Hierarchical Models}
+\title{Black Hole Classification Magic}
 
 \author{Daniela Huppenkothen\altaffilmark{1, 2, 3}, Lucy M. Heil\altaffilmark{4}, David W. Hogg\altaffilmark{2,1}}
  
@@ -70,11 +70,45 @@
 
 \section{Introduction}
 
+Some stuff about black holes. Also, perhaps the total ASM light curve.
 
 \section{Observations and Data Preparation}
 
+{\bf Lucy: Please add some stuff about data modes and extraction and stuff? Also, restrictions on which observations were used etc.}
 
-\section{Supervised Classification}
+\begin{figure*}[htbp]
+\begin{center}
+\includegraphics[width=\textwidth]{grs1915_asm_lc_all.pdf}
+\caption{\rxte\ All-Sky Monitor (ASM) light curve for the entire duration of the \rxte\ mission. Each panel covers $500$ days. Shown in blue is the ASM light curve. In green, the start points of the \rxte/PCA observations with high enough time resolution to be relevant for this analysis. The \rxte/PCA observations span the entire lifetime and provide a 
+sample with high coverage in time, albeit with a bias toward active periods of the system.}
+\label{fig:asm_total}
+\end{center}
+\end{figure*}
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{obs_duration.pdf}
+\caption{Histogram of the durations of all observations used in the analysis. Most observations have durations of $1000$ --- $5000$ seconds, few are significantly longer. Note that these reflect total durations for a given observation without application of Good Time Intervals (GTIs); in the analysis below, these durations may be shortened or split in parts by detector failures and the motion of the space craft ({\bf Lucy: I think there is something about the RXTE orbit that gives observations a natural upper limit?}.}
+\label{fig:asm_total}
+\end{center}
+\end{figure}
+
+
+We extracted light curves in $4$ energy bands: $3 - 13$ keV, $3 - 6$ keV, $9 - 15$ keV, and $15 - 75$ keV. While the energy ranges will not be exactly the same from light curve to light curve due to the gradual changes in the sensitivity of individual channels over time, we have taken care to keep the energy ranges as constant as possible, including and excluding channels as necessary. All light curves have a time resolution of $0.125$ seconds. We include a total of $1711$ observations in the analysis. 
+We split the observations in training, validation and test data sets, with $60\%$ of observations in the training set and $20\%$ of all observations in the validation and test sets each. 
+Each observation is split into segments of $1024\,\mathrm{s}$ duration, starting every $128\,\mathrm{s}$ apart. This leads to overlaps between consecutive segments, but augments the relatively small data set and ensures that we are sensitive to within-state changes in light curve properties. We note that we repeated the analysis below with both shorter and longer segment sizes. For shorter segment sizes, changes in the light curve and energy properties within states leads to increased uncertainty in the classification, for longer segments, the training set becomes too small to properly train the model, thus leading to an increase in mis-classifications.
+
+We use the $3 - 13$ keV band for all time series and power spectral features, and form two hardness ratios that encode energy spectral changes between states. Hardness ratio 1 (HR1) is defined as $\mathrm{HR}1 = $.
+
+\section{Feature Engineering and Supervised Classification}
+
+Feature engineering is the most important and most difficult part of any machine learning problem. It is here where domain knowledge of the problem at hand becomes crucial to finding the most informative features to be used by the computer in the subsequent classification task. 
+We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves in three energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
+
+\subsection{Time Series Features}
+
+Because it is difficult to encapsulate the large variety of shapes observed in the light curves of GRS 1915+105, we restrict ourselves here to a small and simple feature set: the mean count rate, median count rate and total variance in the light curve segment in the $3 - 13$ keV band. 
+
 
 
 \section{Unsupervised Classification}
