@@ -493,9 +493,14 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
     return fdict
 
 
-def check_nan(features, labels):
+def check_nan(features, labels, hr=True, lc=True):
     inf_ind = []
     fnew, lnew = [], []
+    if lc:
+        lcnew = []
+    if hr:
+        hrnew = []
+
     for i,f in enumerate(features["features"]):
 
         try:
@@ -506,17 +511,25 @@ def check_nan(features, labels):
             else:
                 fnew.append(f)
                 lnew.append(labels[i])
+                if lc:
+                    lcnew.append(features["lc"][i])
+                if hr:
+                    hrnew.append(features["hr"][i])
         except ValueError:
             print("f: " + str(f))
             print("type(f): " + str(type(f)))
             raise Exception("This is breaking! Boo!")
-
-    return fnew, lnew
+    features_new = {"features":fnew}
+    if lc:
+        features_new["lc"] = lcnew
+    if hr:
+        features_new["hr"] = hrnew
+    return features_new, lnew
 
 def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test_frac = 0.2,
                   seg=True, seg_length=1024., overlap = 128.,
                   bins=30, navg=4, hr_summary=True, ps_summary=True, lc=True, hr=True,
-                  save_features=True, fout="grs1915_features.dat"):
+                  save_features=True, froot="grs1915"):
 
     data = extract_data(d_all, val, train_frac, validation_frac, test_frac, seg, seg_length, overlap)
 
@@ -530,26 +543,66 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
 
     features_train = make_features(seg_train, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
     features_test = make_features(seg_test, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-    labelled_features = {"train": [features_train, labels_train],
-                     "test": [features_test, labels_test]}
 
     ## check for NaN
     print("Checking for NaN in the training set ...")
-    features_train, labels_train = check_nan(features_train, labels_train)
+    features_train, labels_train = check_nan(features_train, labels_train, hr=hr, lc=lc)
     print("Checking for NaN in the test set ...")
-    features_test, labels_test = check_nan(features_test, labels_test)
+    features_test, labels_test = check_nan(features_test, labels_test, hr=hr, lc=lc)
+
+    labelled_features = {"train": [features_train["features"], labels_train],
+                     "test": [features_test["features"], labels_test]}
 
     if val:
         features_val = make_features(seg_val, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-        labelled_features["val"] =  [features_val, labels_val],
-        features_val, labels_val = check_nan(features_val, labels_val)
+        labelled_features["val"] =  [features_val["features"], labels_val],
+        features_val, labels_val = check_nan(features_val, labels_val, hr=hr, lc=lc)
     print("Checking for NaN in the validation set ...")
 
     if save_features:
-        f = open(fout, "w")
-        pickle.dump(labelled_features, f)
-        f.close()
+        np.savetxt(froot+"_features_train.txt", features_train["features"])
+        np.savetxt(froot+"_features_test.txt", features_test["features"])
 
+        ltrainfile = open(froot+"_labels_train.txt", "w")
+        for l in labels_train:
+            ltrainfile.write(str(l) + "\n")
+        ltrainfile.close()
+
+        ltestfile = open(froot+"_labels_test.txt", "w")
+        for l in labels_test:
+            ltestfile.write(str(l) + "\n")
+        ltestfile.close()
+
+
+        if val:
+            np.savetxt(froot+"_features_val.txt", features_val["features"])
+            lvalfile = open(froot+"_labels_val.txt", "w")
+            for l in labels_val:
+                lvalfile.write(str(l) + "\n")
+            lvalfile.close()
+
+
+        if lc:
+            lc_all = {"train":features_train["lc"], "test":features_test["lc"]}
+            if val:
+                lc_all["val"] = features_val["lc"]
+
+            f = open(froot+"_lc_all.dat", "w")
+            pickle.dump(lc_all, f)
+            f.close()
+
+        if hr:
+            hr_all = {"train":features_train["hr"], "test":features_test["hr"]}
+            if val:
+                hr_all["val"] = features_val["hr"]
+
+            f = open(froot+"_hr_all.dat", "w")
+            pickle.dump(hr_all, f)
+            f.close()
+
+        #f = open(froot+"_features.dat", "w")
+        #pickle.dump(labelled_features, f)
+        #f.close()
 
     return labelled_features
 
@@ -605,7 +658,7 @@ def extract_all(d_all, datadir="./"):
         lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
                   seg=True, seg_length=sl, overlap=overlap,
                   bins=bins, navg=navg, hr_summary=True, ps_summary=True, lc=True, hr=True,
-                  save_features=True, fout=datadir+"grs1915_%i_clean_summary_features.dat"%int(sl))
+                  save_features=True, froot=datadir+"grs1915_%i_all_summary"%int(sl))
 
         #print("%i segments, hr full"%int(sl))
         #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
