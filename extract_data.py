@@ -55,6 +55,16 @@ def combine_lightcurves(obsids, datadir="./"):
     :return: saves file to disk
     """
     #print("Running through %i ObsIDs ..."%len(obsids))
+
+    hdulist = fits.open(datadir+"GRS1915+105.fits")
+    h = hdulist[1]
+    d = h.data
+    all_obs = d["OBSID"]
+    t_start = d["T_START_OBS"]
+    t_mid = d["TIME"]
+    t_end = d["T_STOP_OBS"]
+    exposure = d["EXPOSURE"]
+
     for i,o in enumerate(obsids):
         #print("i = " + str(i))
         #print("I am on ObsID " + str(o))
@@ -85,7 +95,6 @@ def combine_lightcurves(obsids, datadir="./"):
         ### RXTE data of GRS 1915+105 as made by Lucy, because the energy ranges are not
         ### *quite* the same for the different observations (since the bins shifted with time,
         ### so I need to some complicated statements to figure out which is low, mid and high band.
-
 
         total_band_ind = np.where((emin_all < 6.2) & (emax_all > 10.))[0]
         #total_band_ind = np.where((emin_all == np.min(emin_all)) & (emax_all == np.max(emax_all)))[0]
@@ -122,14 +131,29 @@ def combine_lightcurves(obsids, datadir="./"):
         #    print("high_band_ind2: " + str(high_band_ind2))
         #    print("high band file 2: " + str(fobs[high_band_ind2]))
 
+
+        mlf_ind = np.where(obsid == np.array(d["OBSID"]))[0]
+        print("index of ObsID file: " + str(mlf_ind))
+        if len(mlf_ind) == 0:
+            print("don't know where the observation is. Continuing ...")
+            continue
+
+        start_time = t_start[mlf_ind]*3600.0*24.0
+
         total_data = fits.open(fobs[total_band_ind])
         total_times, total_counts = total_data[1].data.field(0), total_data[1].data.field(1)
         #print("len(total_times): " + str(len(total_times)))
+        gti_start = total_data[3].data.field(0)[0]
+
+        total_times += start_time + gti_start
+
         dt_total = np.min(total_times[1:] - total_times[:-1])
         nbins_total = len(total_times)
 
         low_data = fits.open(fobs[low_band_ind])
         low_times, low_counts = low_data[1].data.field(0), low_data[1].data.field(1)
+        low_times += start_time + gti_start
+
         #print("len(low_times): " + str(len(low_times)))
         dt_low = np.min(low_times[1:] - low_times[:-1])
         nbins_low= len(low_times)
@@ -137,10 +161,11 @@ def combine_lightcurves(obsids, datadir="./"):
 
         mid_data = fits.open(fobs[mid_band_ind])
         mid_times, mid_counts = mid_data[1].data.field(0), mid_data[1].data.field(1)
+        mid_times += start_time + gti_start
+
         #print("len(mid_times): " + str(len(mid_times)))
         dt_mid = np.min(mid_times[1:] - mid_times[:-1])
         nbins_mid = len(mid_times)
-
 
         #if high_band_ind1 is None:
         #    print("I am here")
@@ -153,6 +178,8 @@ def combine_lightcurves(obsids, datadir="./"):
 
         high_data = fits.open(fobs[high_band_ind2])
         high_times, high_counts = high_data[1].data.field(0), high_data[1].data.field(1)
+        high_times += start_time + gti_start
+
         #print("len(high_times): " + str(len(high_times)))
         dt_high = np.min(high_times[1:] - high_times[:-1])
         nbins_high = len(high_times)
