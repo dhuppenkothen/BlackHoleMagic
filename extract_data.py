@@ -131,8 +131,10 @@ def combine_lightcurves(obsids, datadir="./"):
         #    print("high_band_ind2: " + str(high_band_ind2))
         #    print("high band file 2: " + str(fobs[high_band_ind2]))
 
+        print("This observation: " + str(obsid))
+        #print(d["OBSID"])
 
-        mlf_ind = np.where(obsid == np.array(d["OBSID"]))[0]
+        mlf_ind = np.where(obsid == d["OBSID"])[0]
         print("index of ObsID file: " + str(mlf_ind))
         if len(mlf_ind) == 0:
             print("don't know where the observation is. Continuing ...")
@@ -143,7 +145,7 @@ def combine_lightcurves(obsids, datadir="./"):
         total_data = fits.open(fobs[total_band_ind])
         total_times, total_counts = total_data[1].data.field(0), total_data[1].data.field(1)
         #print("len(total_times): " + str(len(total_times)))
-        gti_start = total_data[3].data.field(0)[0]
+        gti_start = total_data[2].data.field(0)[0]
 
         total_times += start_time + gti_start
 
@@ -388,13 +390,14 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
 
     ## make a list of all ObsIDs
     files = glob.glob(datadir+"LC*.fits")
+    print(files)
     obsids = [f.split("_")[1] for f in files]
     #print("Total number of files: " + str(len(obsids)))
     obsids = set(obsids)
     #print("Total number of ObsIDs: " + str(len(obsids)))
 
     ### combine low-,mid- and high-energy light curves and save in ascii files
-    combine_lightcurves(obsids, datadir="./")
+    combine_lightcurves(obsids, datadir=datadir)
 
     ### find all newly combined data files and extract the segments
     files = glob.glob(datadir+"*combined.dat")
