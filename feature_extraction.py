@@ -47,7 +47,7 @@ def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0
 
 ## This function is also in grs1915_utils.py!
 def extract_segments(d_all, seg_length = 256., overlap=64.):
-    """ Extract light curve segmens from a list of light curves.
+    """ Extract light curve segments from a list of light curves.
         Each element in the list is a list with two elements:
         - an array that contains the light curve in three energy bands
         (full, low energies, high energies) and
@@ -534,15 +534,22 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
     data = extract_data(d_all, val, train_frac, validation_frac, test_frac, seg, seg_length, overlap)
 
     seg_train, labels_train = data[0]
+    tstart_train = np.array([s[0,0] for s in seg_train])
     seg_test, labels_test = data[-1]
+    tstart_test = np.array([s[0,0] for s in seg_test])
+
     if len(data) == 3:
         seg_val, labels_val = data[1]
+        tstart_val = np.array([s[0,0] for s in seg_val])
 
     ### hrlimits are derived from the data, in the GRS1915_DataVisualisation Notebook
     hrlimits = [[-2.5, 1.5], [-3.0, 2.0]]
 
     features_train = make_features(seg_train, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
     features_test = make_features(seg_test, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
+
+    features_train = np.concatenate((tstart_train, features_train))
+    features_test = np.concatenate((tstart_test, features_test))
 
     ## check for NaN
     print("Checking for NaN in the training set ...")
@@ -555,6 +562,8 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
 
     if val:
         features_val = make_features(seg_val, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
+        features_val = np.concatenate((tstart_val, features_val))
+
         labelled_features["val"] =  [features_val["features"], labels_val],
         features_val, labels_val = check_nan(features_val, labels_val, hr=hr, lc=lc)
     print("Checking for NaN in the validation set ...")
@@ -617,7 +626,7 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
 def extract_all(d_all, datadir="./"):
 
     #seg_length_all = [512., 1024., 2048.]
-    seg_length_all = [1024.]
+    seg_length_all = [512.]
     overlap = 128.
     val = True
     seg = True
