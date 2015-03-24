@@ -588,7 +588,7 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
                 lc_all["val"] = features_val["lc"]
 
             f = open(froot+"_lc_all.dat", "w")
-            pickle.dump(lc_all, f)
+            pickle.dump(lc_all, f, -1)
             f.close()
 
         if hr:
@@ -597,7 +597,7 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
                 hr_all["val"] = features_val["hr"]
 
             f = open(froot+"_hr_all.dat", "w")
-            pickle.dump(hr_all, f)
+            pickle.dump(hr_all, f, -1)
             f.close()
 
         #f = open(froot+"_features.dat", "w")

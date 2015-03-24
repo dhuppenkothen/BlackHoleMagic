@@ -131,8 +131,6 @@ def combine_lightcurves(obsids, datadir="./"):
         #    print("high_band_ind2: " + str(high_band_ind2))
         #    print("high band file 2: " + str(fobs[high_band_ind2]))
 
-        print("This observation: " + str(obsid))
-        #print(d["OBSID"])
 
         mlf_ind = np.where(obsid == d["OBSID"])[0]
         print("index of ObsID file: " + str(mlf_ind))
@@ -390,7 +388,6 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
 
     ## make a list of all ObsIDs
     files = glob.glob(datadir+"LC*.fits")
-    print(files)
     obsids = [f.split("_")[1] for f in files]
     #print("Total number of files: " + str(len(obsids)))
     obsids = set(obsids)
@@ -404,14 +401,13 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
     d_all = extract_obsmode_data(files, bin_data=True, bin_res=bin_res, label_only=clean, labels="clean")
 
     d_all_new = remove_nans(d_all)
-
     if clean:
         outfile = "grs1915_clean_label_%ims.dat"%int(bin_res*1000.0)
     else:
         outfile = "grs1915_all_%ims.dat"%int(bin_res*1000.0)
 
     f = open(datadir+outfile, "w")
-    pickle.dump(d_all_new, f)
+    pickle.dump(d_all_new, f, -1)
     f.close()
 
     return
