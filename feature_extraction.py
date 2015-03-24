@@ -360,8 +360,8 @@ def hr_fitting(seg):
     low_counts = seg[:,2]
     mid_counts = seg[:,3]
     high_counts = seg[:,4]
-    hr1 = np.log(mid_counts/low_counts)
-    hr2 = np.log(high_counts/low_counts)
+    hr1 = mid_counts/low_counts
+    hr2 = high_counts/low_counts
 
     # compute the robust statistics
     #(mu_r, sigma1_r,
@@ -383,12 +383,12 @@ def hr_fitting(seg):
     mu1 = np.mean(hr1)
     mu2 = np.mean(hr2)
 
-    cov = np.cov(hr1, hr2)
+    cov = np.cov(hr1, hr2).flatten()
 
     if np.any(np.isnan(cov)):
         print("NaN in cov")
 
-    return mu1, mu2, cov.flatten()
+    return mu1, mu2, cov
 #    return mu_r, sigma1_r, sigma2_r, alpha_r
 
 def hid_maps(seg, bins=30):
@@ -460,7 +460,7 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
         if hr_summary:
             mu1, mu2, cov = hr_fitting(s)
             features_temp.extend([mu1, mu2])
-            features_temp.extend(cov.flatten())
+            features_temp.extend(cov)
 
         else:
             xedges, yedges, h = hr_maps(s, bins=bins, hrlimits=hrlimits)
@@ -626,8 +626,8 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
 def extract_all(d_all, datadir="./"):
 
     #seg_length_all = [512., 1024., 2048.]
-    seg_length_all = [512.]
-    overlap = 128.
+    seg_length_all = [256.]
+    overlap = 64.
     val = True
     seg = True
     train_frac = 0.5

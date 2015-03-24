@@ -391,7 +391,7 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
     obsids = [f.split("_")[1] for f in files]
     #print("Total number of files: " + str(len(obsids)))
     obsids = set(obsids)
-    #print("Total number of ObsIDs: " + str(len(obsids)))
+    print("Total number of ObsIDs: " + str(len(obsids)))
 
     ### combine low-,mid- and high-energy light curves and save in ascii files
     combine_lightcurves(obsids, datadir=datadir)
