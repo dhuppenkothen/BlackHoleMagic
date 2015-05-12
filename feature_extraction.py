@@ -202,7 +202,9 @@ def timeseries_features(seg):
     fmean = np.mean(counts)
     fmedian = np.median(counts)
     fvar = np.var(counts)
-    return fmean, fmedian, fvar
+    skew = scipy.stats.skew(counts)
+    kurt = scipy.stats.kurtosis(counts)
+    return fmean, fmedian, fvar, skew, kurt
 
 
 def psd_features(seg, pcb):
@@ -385,10 +387,13 @@ def hr_fitting(seg):
 
     cov = np.cov(hr1, hr2).flatten()
 
+    skew = scipy.stats.skew(np.array([hr1, hr2]).T)
+    kurt = scipy.stats.kurtosis(np.array([hr1, hr2]).T)
+
     if np.any(np.isnan(cov)):
         print("NaN in cov")
 
-    return mu1, mu2, cov
+    return mu1, mu2, cov, skew, kurt
 #    return mu_r, sigma1_r, sigma2_r, alpha_r
 
 def hid_maps(seg, bins=30):
@@ -442,8 +447,8 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
         features_temp = []
 
         ## time series summary features
-        fmean, fmedian, fvar = timeseries_features(s)
-        features_temp.extend([fmean, fmedian, fvar])
+        fmean, fmedian, fvar, fskew, fkurt = timeseries_features(s)
+        features_temp.extend([fmean, fmedian, fvar, fskew, fkurt])
 
 
         if ps_summary:
@@ -458,9 +463,17 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
 
 
         if hr_summary:
-            mu1, mu2, cov = hr_fitting(s)
+            mu1, mu2, cov, skew, kurt = hr_fitting(s)
+            #print("len(features): " + str(len(features_temp)))
             features_temp.extend([mu1, mu2])
-            features_temp.extend(cov)
+            #print(len(features_temp))
+            features_temp.extend([cov[0], cov[1], cov[3]])
+            #print(len(features_temp))
+            features_temp.extend(list(skew))
+            #print(len(features_temp))
+            features_temp.extend(list(kurt))
+            #print(len(features_temp))
+
 
         else:
             xedges, yedges, h = hr_maps(s, bins=bins, hrlimits=hrlimits)
@@ -495,7 +508,7 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
 
 def check_nan(features, labels, hr=True, lc=True):
     inf_ind = []
-    fnew, lnew = [], []
+    fnew, lnew, tnew = [], [], []
     if lc:
         lcnew = []
     if hr:
@@ -506,11 +519,14 @@ def check_nan(features, labels, hr=True, lc=True):
         try:
             if any(np.isnan(f)):
                 print("NaN in sample row %i"%i)
-            if any(np.isinf(f)):
+                continue
+            elif any(np.isinf(f)):
                 print("inf sample row %i"%i)
+                continue
             else:
                 fnew.append(f)
                 lnew.append(labels[i])
+                tnew.append(features["tstart"][i])
                 if lc:
                     lcnew.append(features["lc"][i])
                 if hr:
@@ -519,7 +535,7 @@ def check_nan(features, labels, hr=True, lc=True):
             print("f: " + str(f))
             print("type(f): " + str(type(f)))
             raise Exception("This is breaking! Boo!")
-    features_new = {"features":fnew}
+    features_new = {"features":fnew, "tstart":tnew}
     if lc:
         features_new["lc"] = lcnew
     if hr:
@@ -548,45 +564,63 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
     features_train = make_features(seg_train, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
     features_test = make_features(seg_test, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
 
-    features_train = np.concatenate((tstart_train, features_train))
-    features_test = np.concatenate((tstart_test, features_test))
+    print("len(tstart_train): " + str(len(tstart_train)))
+    print("len(features_train): " + str(len(features_train)))
+
+    features_train["tstart"] = tstart_train
+    features_test["tstart"] = tstart_test
+    #features_train = np.concatenate((tstart_train, features_train))
+    #features_test = np.concatenate((tstart_test, features_test))
+
+    print("len(tstart_test): " + str(len(tstart_test)))
+    print("len(features_test): " + str(len(features_test)))
+
 
     ## check for NaN
     print("Checking for NaN in the training set ...")
-    features_train, labels_train = check_nan(features_train, labels_train, hr=hr, lc=lc)
+    features_train_checked, labels_train_checked = check_nan(features_train, labels_train, hr=hr, lc=lc)
     print("Checking for NaN in the test set ...")
-    features_test, labels_test = check_nan(features_test, labels_test, hr=hr, lc=lc)
+    features_test_checked, labels_test_checked = check_nan(features_test, labels_test, hr=hr, lc=lc)
 
-    labelled_features = {"train": [features_train["features"], labels_train],
-                     "test": [features_test["features"], labels_test]}
+
+    labelled_features = {"train": [features_train_checked["features"], labels_train_checked],
+                     "test": [features_test_checked["features"], labels_test_checked]}
 
     if val:
         features_val = make_features(seg_val, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-        features_val = np.concatenate((tstart_val, features_val))
+        #features_val = np.concatenate((tstart_val, features_val))
+        features_val["tstart"] = tstart_val
 
-        labelled_features["val"] =  [features_val["features"], labels_val],
-        features_val, labels_val = check_nan(features_val, labels_val, hr=hr, lc=lc)
+        features_val_checked, labels_val_checked = check_nan(features_val, labels_val, hr=hr, lc=lc)
+
+        labelled_features["val"] =  [features_val_checked["features"], labels_val_checked],
+
     print("Checking for NaN in the validation set ...")
 
     if save_features:
-        np.savetxt(froot+"_features_train.txt", features_train["features"])
-        np.savetxt(froot+"_features_test.txt", features_test["features"])
+        np.savetxt(froot+"_features_train.txt", features_train_checked["features"])
+        np.savetxt(froot+"_features_test.txt", features_test_checked["features"])
+
+        np.savetxt(froot+"_tstart_train.txt", features_train_checked["tstart"])
+        np.savetxt(froot+"_tstart_test.txt", features_test_checked["tstart"])
 
         ltrainfile = open(froot+"_labels_train.txt", "w")
-        for l in labels_train:
+        for l in labels_train_checked:
             ltrainfile.write(str(l) + "\n")
         ltrainfile.close()
 
         ltestfile = open(froot+"_labels_test.txt", "w")
-        for l in labels_test:
+        for l in labels_test_checked:
             ltestfile.write(str(l) + "\n")
         ltestfile.close()
 
 
         if val:
-            np.savetxt(froot+"_features_val.txt", features_val["features"])
+            np.savetxt(froot+"_features_val.txt", features_val_checked["features"])
+            np.savetxt(froot+"_tstart_val.txt", features_val_checked["tstart"])
+
             lvalfile = open(froot+"_labels_val.txt", "w")
-            for l in labels_val:
+            for l in labels_val_checked:
                 lvalfile.write(str(l) + "\n")
             lvalfile.close()
 
@@ -627,7 +661,7 @@ def extract_all(d_all, datadir="./"):
 
     #seg_length_all = [512., 1024., 2048.]
     seg_length_all = [256.]
-    overlap = 64.
+    overlap = 128.
     val = True
     seg = True
     train_frac = 0.5
@@ -662,7 +696,6 @@ def extract_all(d_all, datadir="./"):
 
 
     for sl in seg_length_all:
-
         print("%i segments, summary"%int(sl))
         lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
                   seg=True, seg_length=sl, overlap=overlap,
