@@ -716,18 +716,18 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
 
         if lc:
-            lc_all = {"train":features_train["lc"], "test":features_test["lc"]}
+            lc_all = {"train":features_train_checked["lc"], "test":features_test_checked["lc"]}
             if val:
-                lc_all["val"] = features_val["lc"]
+                lc_all["val"] = features_val_checked["lc"]
 
             f = open(froot+"_%is_lc_all.dat"%int(seg_length), "w")
             pickle.dump(lc_all, f, -1)
             f.close()
 
         if hr:
-            hr_all = {"train":features_train["hr"], "test":features_test["hr"]}
+            hr_all = {"train":features_train_checked["hr"], "test":features_test_checked["hr"]}
             if val:
-                hr_all["val"] = features_val["hr"]
+                hr_all["val"] = features_val_checked["hr"]
 
             f = open(froot+"_%is_hr_all.dat"%int(seg_length), "w")
             pickle.dump(hr_all, f, -1)
