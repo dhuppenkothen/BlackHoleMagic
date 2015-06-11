@@ -7,6 +7,15 @@ import cPickle as pickle
 import pandas as pd
 import astroML.stats
 import scipy.stats
+from sklearn.preprocessing import StandardScaler
+
+
+import linearfilter
+
+## set the seed for the random number generator
+## such that my "random choices" remain reproducible
+np.random.seed(20150608)
+
 
 import lightcurve
 import powerspectrum
@@ -69,15 +78,16 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         ## state is a string in the second element of d_seg
         state = d_seg[1]
 
-        ## compute the intervals between adjacent time bins
-        dt_data = data[1:,0] - data[:-1,0]
-        #print(len(dt_data))
-        if len(dt_data) == 0:
+        ## if the length of the light curve is shorter than the
+        ## chosen segment length, discard this light curve
+        length = data[-1,0] - data[0,0]
+        if length < seg_length:
             continue
 
-        #print(dt_data)
+        ## compute the intervals between adjacent time bins
+        dt_data = data[1:,0] - data[:-1,0]
+
         dt = np.min(dt_data)
-        #print("dt: " + str(dt))
 
         ## compute the number of time bins in a segment
         nseg = seg_length/dt
@@ -97,6 +107,9 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
             j+=1
 
 
+    ## convert labels to strings so I don't have a weird
+    ## combination of None objects and strings
+    labels = np.array([str(l) for l in labels])
 
     return segments, labels
 
@@ -166,6 +179,40 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
 #### FUNCTIONS FOR FEATURE EXTRACTION ################################################################################
 ######################################################################################################################
 
+### FIRST PART: TIME SERIES FEATURES
+
+def timeseries_features(seg):
+    counts = seg[:,1]
+    fmean = np.mean(counts)
+    fmedian = np.median(counts)
+    fvar = np.var(counts)
+    skew = scipy.stats.skew(counts)
+    kurt = scipy.stats.kurtosis(counts)
+    return fmean, fmedian, fvar, skew, kurt
+
+def linear_filter(counts_scaled, k=10, lamb=None):
+    """
+    Extract features from a linear filter.
+    :param counts_scaled: numpy ndarray (nsamples, ntimebins) with SCALED TOTAL COUNTS
+    :return ww_all: numpy ndarray (nsamples, k) of weights
+    """
+
+    ## initialize the LinearFilter object
+    lf = linearfilter.LinearFilter(k=k, lamb=lamb)
+
+    ww_all = np.zeros((len(counts_scaled), k))
+
+    ## loop through all light curves and compute the weight vector for each
+    for i,c in enumerate(counts_scaled):
+        ww_all[i,:] = lf.fit_transform(c)[0]
+    return ww_all
+
+
+
+
+#### FOURIER DOMAIN FEATURES
+
+
 ## boundaries for power bands
 pcb = {"pa_min":0.0039, "pa_max":0.031,
        "pb_min":0.031, "pb_max":0.25,
@@ -197,14 +244,7 @@ def rebin_psd(freq, ps, n=10, type='average'):
 
     return binfreq, binps
 
-def timeseries_features(seg):
-    counts = seg[:,1]
-    fmean = np.mean(counts)
-    fmedian = np.median(counts)
-    fvar = np.var(counts)
-    skew = scipy.stats.skew(counts)
-    kurt = scipy.stats.kurtosis(counts)
-    return fmean, fmedian, fvar, skew, kurt
+
 
 
 def psd_features(seg, pcb):
@@ -436,12 +476,41 @@ def extract_lc(seg):
 
 
 
-def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=True, hr=True, hrlimits=None):
+def make_features(seg, k=10, bins=30, lamb=None,
+                  hr_summary=True, ps_summary=True, lc=True, hr=True, hrlimits=None):
+    """
+    Make features from a set of light curve segments, except for the linear filter!
+
+    :param seg: list of all segments to be used
+    :param bins: bins used in a 2D histogram if hr_summary is False
+    :param hr_summary: if True, summarize HRs in means and covariance matrix
+    :param ps_summary: if True, summarize power spectrum in frequency of maximum power and power spectral bands
+    :param lc: if True, store light curves
+    :param hr: if True, store hardness ratios
+    :param hrlimits: limits for the 2D histogram if hr_summary is False
+    :return: fdict: dictionary with keywords "features", "lc" and "hr"
+    """
     features = []
     if lc:
         lc_all = []
     if hr:
         hr_all = []
+
+
+    ## MAKE FEATURES BASED ON LINEAR FILTER
+
+    ## first, extract the total counts out of each segment
+    counts = np.array([s[:,1] for s in seg])
+
+    ## next, transform the array such that *each light curve* is scaled
+    ## to zero mean and unit variance
+    ## We can do this for all light curves independently, because we're
+    ## averaging *per light curve* and not *per time bin*
+    counts_scaled = StandardScaler().fit_transform(counts.T).T
+
+    ## transform the counts into a weight vector
+    ww = linear_filter(counts_scaled, k=k)
+
     for s in seg:
 
         features_temp = []
@@ -491,8 +560,10 @@ def make_features(seg, bins=30, navg=4, hr_summary=True, ps_summary=True, lc=Tru
             #print("appending hardness ratios")
             hr_all.append([lc_temp[2], lc_temp[3]])
 
+    features_all = np.hstack((np.array(features), ww))
+
     print("I am about to make a dictionary")
-    fdict = {"features": features}
+    fdict = {"features": features_all}
     print(fdict.keys)
     if lc:
         print("I am in lc")
@@ -542,27 +613,46 @@ def check_nan(features, labels, hr=True, lc=True):
         features_new["hr"] = hrnew
     return features_new, lnew
 
-def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test_frac = 0.2,
-                  seg=True, seg_length=1024., overlap = 128.,
-                  bins=30, navg=4, hr_summary=True, ps_summary=True, lc=True, hr=True,
-                  save_features=True, froot="grs1915"):
 
-    data = extract_data(d_all, val, train_frac, validation_frac, test_frac, seg, seg_length, overlap)
 
-    seg_train, labels_train = data[0]
+
+def make_all_features(d_all, k=10, lamb=0.1,
+                      val=True, train_frac=0.6, validation_frac=0.2, test_frac = 0.2,
+                      seg=True, seg_length=1024., overlap = 64.,
+                      bins=30, navg=4, hr_summary=True, ps_summary=True, lc=True, hr=True,
+                      save_features=True, froot="grs1915"):
+
+    ## Set the seed to I will always pick out the same light curves.
+    np.random.seed(20150608)
+
+    ## shuffle list of light curves
+    np.random.shuffle(d_all)
+
+    n_lcs = len(d_all)
+
+    ## let's pull out light curves for three data sets into different variables.
+    d_all_train = d_all[:int(train_frac*n_lcs)]
+    d_all_test = d_all[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]
+
+    seg_train, labels_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
+    seg_test, labels_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
+
     tstart_train = np.array([s[0,0] for s in seg_train])
-    seg_test, labels_test = data[-1]
     tstart_test = np.array([s[0,0] for s in seg_test])
 
-    if len(data) == 3:
-        seg_val, labels_val = data[1]
+
+    if val:
+        d_all_val = d_all[int((train_frac + test_frac)*n_lcs):]
+        seg_val, labels_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
         tstart_val = np.array([s[0,0] for s in seg_val])
+
 
     ### hrlimits are derived from the data, in the GRS1915_DataVisualisation Notebook
     hrlimits = [[-2.5, 1.5], [-3.0, 2.0]]
 
-    features_train = make_features(seg_train, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-    features_test = make_features(seg_test, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
+
+    features_train = make_features(seg_train,k, bins, lamb, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
+    features_test = make_features(seg_test,k, bins, lamb,  hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
 
     print("len(tstart_train): " + str(len(tstart_train)))
     print("len(features_train): " + str(len(features_train)))
@@ -587,7 +677,7 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
                      "test": [features_test_checked["features"], labels_test_checked]}
 
     if val:
-        features_val = make_features(seg_val, bins, navg, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
+        features_val = make_features(seg_val, k, bins, lamb, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
         #features_val = np.concatenate((tstart_val, features_val))
         features_val["tstart"] = tstart_val
 
@@ -598,28 +688,28 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
     print("Checking for NaN in the validation set ...")
 
     if save_features:
-        np.savetxt(froot+"_features_train.txt", features_train_checked["features"])
-        np.savetxt(froot+"_features_test.txt", features_test_checked["features"])
+        np.savetxt(froot+"_%is_features_train.txt"%int(seg_length), features_train_checked["features"])
+        np.savetxt(froot+"_%is_features_test.txt"%int(seg_length), features_test_checked["features"])
 
-        np.savetxt(froot+"_tstart_train.txt", features_train_checked["tstart"])
-        np.savetxt(froot+"_tstart_test.txt", features_test_checked["tstart"])
+        np.savetxt(froot+"_%is_tstart_train.txt"%int(seg_length), features_train_checked["tstart"])
+        np.savetxt(froot+"_%is_tstart_test.txt"%int(seg_length), features_test_checked["tstart"])
 
-        ltrainfile = open(froot+"_labels_train.txt", "w")
+        ltrainfile = open(froot+"_%is_labels_train.txt"%int(seg_length), "w")
         for l in labels_train_checked:
             ltrainfile.write(str(l) + "\n")
         ltrainfile.close()
 
-        ltestfile = open(froot+"_labels_test.txt", "w")
+        ltestfile = open(froot+"_%is_labels_test.txt"%int(seg_length), "w")
         for l in labels_test_checked:
             ltestfile.write(str(l) + "\n")
         ltestfile.close()
 
 
         if val:
-            np.savetxt(froot+"_features_val.txt", features_val_checked["features"])
-            np.savetxt(froot+"_tstart_val.txt", features_val_checked["tstart"])
+            np.savetxt(froot+"_%is_features_val.txt"%int(seg_length), features_val_checked["features"])
+            np.savetxt(froot+"_%is_tstart_val.txt"%int(seg_length), features_val_checked["tstart"])
 
-            lvalfile = open(froot+"_labels_val.txt", "w")
+            lvalfile = open(froot+"_%is_labels_val.txt"%int(seg_length), "w")
             for l in labels_val_checked:
                 lvalfile.write(str(l) + "\n")
             lvalfile.close()
@@ -630,7 +720,7 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
             if val:
                 lc_all["val"] = features_val["lc"]
 
-            f = open(froot+"_lc_all.dat", "w")
+            f = open(froot+"_%is_lc_all.dat"%int(seg_length), "w")
             pickle.dump(lc_all, f, -1)
             f.close()
 
@@ -639,7 +729,7 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
             if val:
                 hr_all["val"] = features_val["hr"]
 
-            f = open(froot+"_hr_all.dat", "w")
+            f = open(froot+"_%is_hr_all.dat"%int(seg_length), "w")
             pickle.dump(hr_all, f, -1)
             f.close()
 
@@ -651,73 +741,21 @@ def make_all_features(d_all, val=True, train_frac=0.6, validation_frac=0.2, test
 
 
 
-
-
 ######################################################################################################################
 #### EXTRACT FEATURE FILES ###########################################################################################
 ######################################################################################################################
 
-def extract_all(d_all, datadir="./"):
-
-    #seg_length_all = [512., 1024., 2048.]
-    seg_length_all = [256.]
-    overlap = 128.
-    val = True
-    seg = True
-    train_frac = 0.5
-    validation_frac = 0.25
-    test_frac = 0.25
-
-    navg = 30
-    bins = 20
-
-
-    #f = open(filename)
-    #d_all = pickle.load(f)
-    #f.close()
-
-
-    ## no segments:
-    #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-    #          seg=False, bins=bins, navg=navg, hr_summary=True, ps_summary=True, lc=True, hr=True,
-    #          save_features=True, fout="grs1915_noseg_summary_features.dat")
-
-    ## no segments:
-    #print("No segments, hr full")
-    #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-    #          seg=False, bins=bins, navg=navg, hr_summary=False, ps_summary=True, lc=True, hr=True,
-    #          save_features=True, fout="grs1915_noseg_hrfull_features.dat")
-
-    ## no segments:
-    #print("No segments, ps full")
-    #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-    #          seg=False, bins=bins, navg=navg, hr_summary=True, ps_summary=False, lc=True, hr=True,
-    #          save_features=True, fout="grs1915_noseg_psfull_features.dat")
+def extract_all(d_all, seg_length_all=[256., 1024.], overlap=128.,
+                val=True, train_frac=0.5, validation_frac = 0.25, test_frac = 0.25,
+                k = 10, lamb=0.1,
+                datadir="./"):
 
 
     for sl in seg_length_all:
         print("%i segments, summary"%int(sl))
-        lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
+        lf = make_all_features(d_all, k, lamb, val, train_frac, validation_frac, test_frac,
                   seg=True, seg_length=sl, overlap=overlap,
-                  bins=bins, navg=navg, hr_summary=True, ps_summary=True, lc=True, hr=True,
-                  save_features=True, froot=datadir+"grs1915_%i_all_summary"%int(sl))
-
-        #print("%i segments, hr full"%int(sl))
-        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-        #          seg=True, seg_length=sl, overlap = overlap,
-        #          bins=bins, navg=navg, hr_summary=False, ps_summary=True, lc=True, hr=True,
-        #          save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_features.dat"%int(sl))
-
-        #print("%i segments, ps full"%int(sl))
-        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-        #          seg=True, seg_length=sl, overlap = overlap,
-        #          bins=bins, navg=navg, hr_summary=True, ps_summary=False, lc=True, hr=True,
-        #          save_features=True, fout=datadir+"grs1915_%i_clean_psfull_features.dat"%int(sl))
-
-        #print("%i segments, ps full, HR full"%int(sl))
-        #lf = make_all_features(d_all, val, train_frac, validation_frac, test_frac,
-        #          seg=True, seg_length=sl, overlap = overlap,
-        #          bins=bins, navg=navg, hr_summary=False, ps_summary=False, lc=True, hr=True,
-        #          save_features=True, fout=datadir+"grs1915_%i_clean_hrfull_psfull_features.dat"%int(sl))
+                  hr_summary=True, ps_summary=True, lc=True, hr=True,
+                  save_features=True, froot=datadir+"grs1915")
 
     return
