@@ -26,6 +26,11 @@ class EchoStateNetwork(object):
         :param x: x-coordinate (time bins)
         :param y: data (K by D, where K is the number of data points, D the dimensionality)
         :param N: number of hidden units.
+        :param a: absolute value of input weights
+        :param r: weights for forward connections between hidden weights
+        :param b: weights for backward connections between hidden weights (for topology="dlrb" only)
+        :param topology: reservoir topology (one of "SCR", "DLR", "DLRB",
+                see Rodan+Tino, "Minimum Complexity Echo State Network" for details
         :return:
         """
 
@@ -54,7 +59,7 @@ class EchoStateNetwork(object):
         print("Number of hidden units: %i"%self.N)
 
         ## output weight matrix
-        self.ww = np.zeros((self.N, ))
+        self.ww = np.zeros((self.N, self.D))
 
         ## reservoir topology and associated parameters
         self.topology = topology
@@ -134,3 +139,4 @@ class EchoStateNetwork(object):
             uu[0,-1] = r
 
         return uu
+
