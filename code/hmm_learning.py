@@ -50,10 +50,10 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
         The sorted array of test features; has dimensions (nsamples, nfeatures+1)
         The first column contains start times of each segment
 
-    labels_train: list of strings
+    labels_train_sorted: list of strings
         The human-classified labels, just in case they might come in handy
 
-    labels_test: list of strings
+    labels_test_sorted: list of strings
         The human-classified labels, just in case they might come in handy
 
     """
@@ -116,7 +116,11 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
     fscaled_train_sorted = fscaled_train[fscaled_train[:,0].argsort()]
     fscaled_test_sorted = fscaled_test[fscaled_test[:,0].argsort()]
 
-    return fscaled_train_sorted, fscaled_test_sorted, labels_train, labels_test
+    labels_train_sorted = labels_train[fscaled_train[:,0].argsort()]
+    labels_test_sorted = labels_test[fscaled_test[:,0].argsort()]
+
+    return fscaled_train_sorted, fscaled_test_sorted, labels_train_sorted, labels_test_sorted
+
 
 def run_hmm(max_comp=5, n_cv=10, datadir="./"):
     """

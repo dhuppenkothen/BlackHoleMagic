@@ -124,6 +124,13 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
 
     labels: {list, ndarray}
         list or array with state labels
+
+    namestr: string, optional, default "test"
+        string with the output file name
+
+    datadir: string, optional, default "./"
+        Location of the output matplotlib figure
+
     """
 
     ## The MJD reference time
@@ -233,6 +240,33 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
 
 
 def plot_classified_lightcurves(tstart, labels, nlc=20, namestr="test", datadir="./"):
+
+    """
+    Plot a sample of light curves from GRS 1915+105 with the
+    classified states superimposed in colours.
+    Saves nlc files with one light curve each in the directory specified in datadir.
+
+    Parameters
+    ----------
+    tstart: numpy.ndarray
+        The list of start times of each segment used in the classification
+
+    labels: list of objects
+        The classified labels (can be human or not)
+
+    nlc: int, optional, default 20
+        The number of light curves to plot (the total is >2000)
+        Will randomly sample nlc light curves from the set
+
+    namestr: string, optional, default "test"
+        An identifier for the output light curves
+
+    datadir: string, optional, default "./"
+        The directory where the data is located and output
+        will be saved
+
+
+    """
 
 
     f = open(datadir+"grs1915_all_125ms.dat")
