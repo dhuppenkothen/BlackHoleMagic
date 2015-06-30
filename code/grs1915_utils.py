@@ -232,7 +232,8 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
     return
 
 
-def plot_classified_lightcurves(tstart, labels, namestr="test", datadir="./"):
+def plot_classified_lightcurves(tstart, labels, nlc=20, namestr="test", datadir="./"):
+
 
     f = open(datadir+"grs1915_all_125ms.dat")
     d_all = pickle.load(f)
@@ -246,7 +247,12 @@ def plot_classified_lightcurves(tstart, labels, namestr="test", datadir="./"):
 
     clist = [colors[i] for i in labels]
     print(len(d_all))
-    for i,d in enumerate(d_all):
+
+    d_ind = np.array(range(len(d_all)))
+    np.random.shuffle(d_ind)
+    d_all_small = [d_all[i] for i in d_ind]
+
+    for i,d in enumerate(d_all_small):
         print("i = %i"%i)
         data = d[0]
         times = data[:,0]

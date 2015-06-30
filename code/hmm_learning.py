@@ -85,20 +85,25 @@ def load_data(seg_length_unsupervised=256.):
 
     return fscaled_train_sorted, fscaled_test_sorted, labels_train, labels_test
 
-def hmm(max_comp=5):
+def run_hmm(max_comp=5, n_cv=10, datadir="./"):
+    """
+    Run a Hidden Markov Model on the data.
+
+    """
 
     ftrain, ftest, ltrain, ltest = load_data(seg_length_unsupervised=256.)
 
     n_components = range(2,max_comp,1)
     ## run for up to 30 clusters
     cv_means, cv_std = [], []
+    cv_scores_all = []
     test_score = []
 
     for n in n_components:
         print("Cross validation for classification with %i states \n"
               "--------------------------------------------------------"%n)
         ## make the samples for 10-fold cross-validation
-        kf = cross_validation.KFold(ftrain.shape[0], n_folds=3, shuffle=False)
+        kf = cross_validation.KFold(ftrain.shape[0], n_folds=n_cv, shuffle=False)
         scores = []
         ## run through all samples
         for train, test in kf:
@@ -123,21 +128,25 @@ def hmm(max_comp=5):
         model2.fit([ftrain])
         test_score.append(model2.score(ftest))
 
+        cv_scores_all.append(cv_scores)
         #si_means.append(np.mean(si_scores))
         #si_std.append(np.mean(si_scores))
         ## print mean and standard deviation of the 10 cross-validated scores
-        print("Cross-validation adjusted rand score is %.2f +- %.4f. \n"
+        print("Cross-validation score is %.2f +- %.4f. \n"
               "============================================\n"%(np.mean(cv_scores), np.std(cv_scores)))
 
-    hmm_results = {"cv_scores":cv_scores, "cv_means":cv_means,
+        print("Test score is %.2f. \n"
+              "============================\n"%model2.score(ftest))
+
+
+    hmm_results = {"cv_scores":cv_scores_all, "cv_means":cv_means,
                    "cv_std":cv_std, "test_score":test_score}
 
-    f = open("grs1915_hmm_results.dat", "w")
+    f = open(datadir+"grs1915_hmm_results.dat", "w")
     pickle.dump(hmm_results, f)
     f.close()
 
     return
 
 
-
-hmm()
+run_hmm(31, n_cv=5, datadir="../../")
