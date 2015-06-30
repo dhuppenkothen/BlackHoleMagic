@@ -9,6 +9,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 import cPickle as pickle
+import copy
 
 from collections import Counter
 
@@ -128,6 +129,7 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
     mjdrefi = 49353.
 
     ## convert all times from MET to MJD
+    times_new =
     times /= (60*60*24.)
     times += mjdrefi
 
