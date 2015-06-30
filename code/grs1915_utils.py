@@ -261,7 +261,6 @@ def plot_classified_lightcurves(tstart, labels, namestr="test", datadir="./"):
         plt.close()
 
 
-
     return
 
 

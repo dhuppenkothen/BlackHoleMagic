@@ -22,6 +22,8 @@ import matplotlib.cm as cmap
 from sklearn.preprocessing import StandardScaler
 from hmmlearn import hmm
 
+from grs1915_utils import state_distribution, state_time_evolution, plot_classified_lightcurves
+
 def load_data(seg_length_unsupervised=256.):
     datadir= "../../"
 
@@ -128,7 +130,15 @@ def hmm(max_comp=5):
         print("Cross-validation adjusted rand score is %.2f +- %.4f. \n"
               "============================================\n"%(np.mean(cv_scores), np.std(cv_scores)))
 
+    hmm_results = {"cv_scores":cv_scores, "cv_means":cv_means,
+                   "cv_std":cv_std, "test_score":test_score}
 
-
+    f = open("grs1915_hmm_results.dat", "w")
+    pickle.dump(hmm_results, f)
+    f.close()
 
     return
+
+
+
+hmm()
