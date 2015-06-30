@@ -5,10 +5,12 @@ import matplotlib.lines as mlines
 import matplotlib.cm as cmap
 
 import seaborn as sns
+from seaborn import color_palette
 
 import numpy as np
 import pandas as pd
 import cPickle as pickle
+import copy 
 
 from collections import Counter
 
@@ -128,8 +130,9 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
     mjdrefi = 49353.
 
     ## convert all times from MET to MJD
-    times /= (60*60*24.)
-    times += mjdrefi
+    times_new = copy.copy(times)
+    times_new /= (60*60*24.)
+    times_new += mjdrefi
 
     ## convert string labels to numbers
     label_set = np.unique(labels)
@@ -187,7 +190,7 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
         ax1 = plt.subplot(gs[i, :4])
 
         ax1.errorbar(asm[:,0], asm[:,1], yerr = asm[:,2], linestyle="steps-mid")
-        path = ax1.scatter(times, np.ones(len(times))*240., facecolor=colours,
+        path = ax1.scatter(times_new, np.ones(len(times_new))*240., facecolor=colours,
                     edgecolor="None")
         ax1.set_xlim([start_time, end_time])
         ax1.set_ylim([1.0, 299.0])
@@ -223,40 +226,28 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
     ax.set_xlabel("Time in MJD", fontsize=18)
     ax.set_ylabel("Count rate [counts/s]", fontsize=18)
 
-    plt.savefig(datadir+namestr+"asm_all.pdf", format="pdf")
+    plt.savefig(datadir+namestr+"_asm_all.pdf", format="pdf")
     plt.close()
-
 
     return
 
 
-def plot_classified_lightcurves(times, labels, namestr="test", datadir="./"):
+def plot_classified_lightcurves(tstart, labels, namestr="test", datadir="./"):
+
     f = open(datadir+"grs1915_all_125ms.dat")
     d_all = pickle.load(f)
     f.close()
 
     ## total number of light curves
     n_lcs = len(d_all)
-
-    ## Set the seed to I will always pick out the same light curves.
-    np.random.seed(20150608)
-
-    ## shuffle list of light curves
-    np.random.shuffle(d_all)
-
-    train_frac = 0.6
-    validation_frac = 0.2
-    test_frac = 0.2
-
-    ## let's pull out light curves for three data sets into different variables.
-    d_all_train = d_all[:int(train_frac*n_lcs)]
-    d_all_val = d_all[int(train_frac*n_lcs):int((train_frac + validation_frac)*n_lcs)]
-    d_all_test = d_all[int((train_frac + validation_frac)*n_lcs):]
-
-    colors = np.loadtxt("colors.txt")
+    n_clusters = len(np.unique(labels))
+    print("n_clusters: " + str(n_clusters))
+    colors = color_palette("hls", n_clusters)
 
     clist = [colors[i] for i in labels]
-    for i,d in enumerate(d_all_train[:10]):
+    print(len(d_all))
+    for i,d in enumerate(d_all):
+        print("i = %i"%i)
         data = d[0]
         times = data[:,0]
         counts = data[:,1]
@@ -265,8 +256,8 @@ def plot_classified_lightcurves(times, labels, namestr="test", datadir="./"):
         mincounts = np.min(counts)
         maxcounts = np.max(counts)
         plt.axis([times[0], times[-1], mincounts-0.1*mincounts, maxcounts+0.1*maxcounts])
-        plt.scatter(fscaled_all[:,0], np.ones_like(tstart_all)*1.05*maxcounts, color=clist)
-        plt.savefig("../../grs1915_lc%i_meanshift.pdf"%i, format="pdf")
+        plt.scatter(tstart, np.ones_like(tstart)*1.05*maxcounts, color=clist)
+        plt.savefig(datadir+"grs1915_lc%i_%s.pdf"%(i, namestr), format="pdf")
         plt.close()
 
 
