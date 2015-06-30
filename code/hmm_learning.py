@@ -13,8 +13,7 @@ plt.rc("text", usetex=True)
 
 import numpy as np
 import cPickle as pickle
-from pandas.tools.plotting import scatter_matrix
-import pandas as pd
+import generaltools as gt
 
 from sklearn import cross_validation
 from sklearn.metrics import confusion_matrix
