@@ -23,8 +23,41 @@ from hmmlearn import hmm
 
 from grs1915_utils import state_distribution, state_time_evolution, plot_classified_lightcurves
 
-def load_data(seg_length_unsupervised=256.):
-    datadir= "../../"
+def load_data(seg_length_unsupervised=256., datadir="../../"):
+    """
+    Load the GRS 1915+105 data in a useful format. Assumes the data
+    comes in files that are output from the feature extraction step described
+    elsewhere in this repository.
+
+    Parameters
+    -----------
+    seg_length_unsupervised: float, optional, default 256
+        The duration of the segments used for feature extraction.
+        Because this is an unsupervised method, we'll use the shorter segments
+        by default.
+
+    datadir: string, optional, default "../../"
+        The directory where the data is located, and where output will be saved
+
+
+    Returns
+    -------
+    fscaled_train_sorted: np.ndarray
+        The sorted array of training features; has dimensions (nsamples, nfeatures+1)
+        The first column contains start times of each segment
+
+    fscaled_test_sorted: np.ndarray
+        The sorted array of test features; has dimensions (nsamples, nfeatures+1)
+        The first column contains start times of each segment
+
+    labels_train: list of strings
+        The human-classified labels, just in case they might come in handy
+
+    labels_test: list of strings
+        The human-classified labels, just in case they might come in handy
+
+    """
+
 
     features_train_full = np.loadtxt(datadir+"grs1915_%is_features_train.txt"%seg_length_unsupervised)
     features_test_full = np.loadtxt(datadir+"grs1915_%is_features_test.txt"%seg_length_unsupervised)
@@ -88,6 +121,24 @@ def load_data(seg_length_unsupervised=256.):
 def run_hmm(max_comp=5, n_cv=10, datadir="./"):
     """
     Run a Hidden Markov Model on the data.
+    Saves a dictionary to disk with the following keywords:
+        cv_scores: an array with dimensions (max_comp-1, n_cv) with the
+                    cross validation scores
+        cv_means: the means of of the CV scores for each number of states
+        cv_std: standard deviations of the CV scores for each number of states
+        test_score: the scores on the test set for each number of states
+
+    Parameters
+    ----------
+    max_comp: int, optional, default 5
+        The maximum number of states in the HMM
+
+    n_cv: int, optional, default 10
+        The number of cross-validation folds to use
+
+    datadir: str, optional, default "./"
+        The directory with the data, where the output will be saved
+
 
     """
 
