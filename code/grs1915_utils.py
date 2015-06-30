@@ -8,6 +8,7 @@ import seaborn as sns
 
 import numpy as np
 import pandas as pd
+import cPickle as pickle
 
 from collections import Counter
 
@@ -147,6 +148,8 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
     start_time = asm_time[0]
     end_time = start_time + plot_len
 
+    print("min(times): " + str(np.min(times)))
+    print("asm time zero: " + str(asm_time[0]))
 
     ## now make the actual figure!
     fig = plt.figure(figsize=(12,15))
@@ -222,6 +225,50 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
 
     plt.savefig(datadir+namestr+"asm_all.pdf", format="pdf")
     plt.close()
+
+
+    return
+
+
+def plot_classified_lightcurves(times, labels, namestr="test", datadir="./"):
+    f = open(datadir+"grs1915_all_125ms.dat")
+    d_all = pickle.load(f)
+    f.close()
+
+    ## total number of light curves
+    n_lcs = len(d_all)
+
+    ## Set the seed to I will always pick out the same light curves.
+    np.random.seed(20150608)
+
+    ## shuffle list of light curves
+    np.random.shuffle(d_all)
+
+    train_frac = 0.6
+    validation_frac = 0.2
+    test_frac = 0.2
+
+    ## let's pull out light curves for three data sets into different variables.
+    d_all_train = d_all[:int(train_frac*n_lcs)]
+    d_all_val = d_all[int(train_frac*n_lcs):int((train_frac + validation_frac)*n_lcs)]
+    d_all_test = d_all[int((train_frac + validation_frac)*n_lcs):]
+
+    colors = np.loadtxt("colors.txt")
+
+    clist = [colors[i] for i in labels]
+    for i,d in enumerate(d_all_train[:10]):
+        data = d[0]
+        times = data[:,0]
+        counts = data[:,1]
+        plt.figure()
+        plt.plot(times, counts, lw=1, linestyle="steps-mid")
+        mincounts = np.min(counts)
+        maxcounts = np.max(counts)
+        plt.axis([times[0], times[-1], mincounts-0.1*mincounts, maxcounts+0.1*maxcounts])
+        plt.scatter(fscaled_all[:,0], np.ones_like(tstart_all)*1.05*maxcounts, color=clist)
+        plt.savefig("../../grs1915_lc%i_meanshift.pdf"%i, format="pdf")
+        plt.close()
+
 
 
     return
