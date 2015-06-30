@@ -10,7 +10,7 @@ from seaborn import color_palette
 import numpy as np
 import pandas as pd
 import cPickle as pickle
-import copy 
+import copy
 
 from collections import Counter
 
