@@ -284,9 +284,9 @@ def plot_classified_lightcurves(tstart, labels, nlc=20, namestr="test", datadir=
 
     d_ind = np.array(range(len(d_all)))
     np.random.shuffle(d_ind)
-    d_all_small = [d_all[i] for i in d_ind]
-
-    for i,d in enumerate(d_all_small):
+    d_all_shuffled = [d_all[i] for i in d_ind]
+ 
+    for i,d in enumerate(d_all_shuffled[:nlc]):
         print("i = %i"%i)
         data = d[0]
         times = data[:,0]
