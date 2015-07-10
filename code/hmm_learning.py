@@ -78,11 +78,12 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
     ## we'll be using the first 20 re-ranked features
     max_features = 20
 
+    """
     ## make new empty arrays for the ranked features
     features_new_train = np.zeros_like(features_train_full[:,:max_features])
     features_new_val = np.zeros_like(features_val_full[:,:max_features])
     features_new_test = np.zeros_like(features_test_full[:,:max_features])
-
+    
     for i,f in enumerate(feature_ranking[:max_features]):
         if i in [0,2,3,6,7,11,13,15,16,19,20]:
             print("Making a log of parameter %i"%i)
@@ -94,6 +95,10 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
             features_new_val[:,i] = features_val_full[:,f]
             features_new_test[:,i] = features_test_full[:,f]
 
+    """
+    features_new_train = features_train_full
+    features_new_val = features_val_full
+    features_new_test = features_test_full
 
     f_all = np.vstack((features_new_train, features_new_val, features_new_test))
 
@@ -146,7 +151,7 @@ def run_hmm(max_comp=5, n_cv=10, datadir="./"):
 
     """
 
-    ftrain, ftest, ltrain, ltest = load_data(seg_length_unsupervised=256.)
+    ftrain, ftest, ltrain, ltest = load_data(seg_length_unsupervised=16.)
 
     n_components = range(2,max_comp,1)
     ## run for up to 30 clusters
