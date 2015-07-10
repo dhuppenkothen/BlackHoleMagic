@@ -510,7 +510,7 @@ def make_features(seg, k=10, bins=30, lamb=None,
 
     ## transform the counts into a weight vector
     ww = linear_filter(counts_scaled, k=k)
-
+    
     for s in seg:
 
         features_temp = []
@@ -523,7 +523,11 @@ def make_features(seg, k=10, bins=30, lamb=None,
         if ps_summary:
             ## PSD summary features
             maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2 = psd_features(s, pcb)
-            features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+            #print("maxfreq: " + str(maxfreq))
+            if len(maxfreq) == 0: 
+                features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+            else: 
+                features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
         else:
             ## whole PSD
             #freq, ps = make_psd(s,navg=navg)
@@ -560,7 +564,10 @@ def make_features(seg, k=10, bins=30, lamb=None,
             #print("appending hardness ratios")
             hr_all.append([lc_temp[2], lc_temp[3]])
 
-    features_all = np.hstack((np.array(features), ww))
+    print("ww.shape: " + str(np.array(ww).shape))
+    print("features.shape: " + str(features[0]))
+    print("type(ww): " + str(type(np.array(ww))))
+    features_all = np.hstack((np.array(features), np.array(ww)))
 
     print("I am about to make a dictionary")
     fdict = {"features": features_all}
@@ -750,11 +757,16 @@ def extract_all(d_all, seg_length_all=[256., 1024.], overlap=128.,
                 k = 10, lamb=0.1,
                 datadir="./"):
 
+ 
+    if np.size(overlap) != np.size(seg_length_all):
+        overlap = [overlap for i in xrange(len(seg_length_all))]
 
-    for sl in seg_length_all:
+    print(overlap)
+
+    for ov, sl in zip(overlap, seg_length_all):
         print("%i segments, summary"%int(sl))
         lf = make_all_features(d_all, k, lamb, val, train_frac, validation_frac, test_frac,
-                  seg=True, seg_length=sl, overlap=overlap,
+                  seg=True, seg_length=sl, overlap=ov,
                   hr_summary=True, ps_summary=True, lc=True, hr=True,
                   save_features=True, froot=datadir+"grs1915")
 
