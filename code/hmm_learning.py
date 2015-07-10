@@ -151,60 +151,70 @@ def run_hmm(max_comp=5, n_cv=10, datadir="./"):
 
     """
 
-    ftrain, ftest, ltrain, ltest = load_data(seg_length_unsupervised=16.)
+    seg_length_all = [16., 64., 128., 256., 512., 1024.]
 
-    n_components = range(2,max_comp,1)
-    ## run for up to 30 clusters
-    cv_means, cv_std = [], []
-    cv_scores_all = []
-    test_score = []
+    for seg in seg_length_all:
+        ftrain, ftest, ltrain, ltest = load_data(seg_length_unsupervised=seg)
 
-    for n in n_components:
-        print("Cross validation for classification with %i states \n"
-              "--------------------------------------------------------"%n)
-        ## make the samples for 10-fold cross-validation
-        kf = cross_validation.KFold(ftrain.shape[0], n_folds=n_cv, shuffle=False)
-        scores = []
-        ## run through all samples
-        for train, test in kf:
-            X_train, X_test = ftrain[train, 1:], ftrain[test, 1:]
-            y_train, y_test = ltrain[train], ltrain[test]
+        n_components = range(2,max_comp,1)
+        ## run for up to 30 clusters
+        covar_types = ['spherical', 'tied', 'diag', 'full']
 
-            model2 = hmm.GaussianHMM(n_components=n, covariance_type='full')
-            model2.fit([X_train])
-            pred_labels = model2.predict(X_train)
+        covar_results = {}
 
-            ## get out those labels that are actually human classified
-            classified_ind = np.where(y_train != "None")[0]
-            #print(len(classified_ind))
+        for cov in covar_types:
+            cv_means, cv_std = [], []
+            cv_scores_all = []
+            test_score = []
 
-            scores.append(model2.score(X_test))
-            print("Score: " + str(model2.score(X_test)))
-        cv_scores = np.array(scores)
-        cv_means.append(np.mean(scores))
-        cv_std.append(np.std(scores))
+            for n in n_components:
 
-        model2 = hmm.GaussianHMM(n_components=n, covariance_type="full")
-        model2.fit([ftrain])
-        test_score.append(model2.score(ftest))
+                print("Cross validation for classification with %i states \n"
+                      "--------------------------------------------------------"%n)
+                ## make the samples for 10-fold cross-validation
+                kf = cross_validation.KFold(ftrain.shape[0], n_folds=n_cv, shuffle=False)
+                scores = []
+                ## run through all samples
+                for train, test in kf:
+                    X_train, X_test = ftrain[train, 1:], ftrain[test, 1:]
+                    y_train, y_test = ltrain[train], ltrain[test]
 
-        cv_scores_all.append(cv_scores)
-        #si_means.append(np.mean(si_scores))
-        #si_std.append(np.mean(si_scores))
-        ## print mean and standard deviation of the 10 cross-validated scores
-        print("Cross-validation score is %.2f +- %.4f. \n"
-              "============================================\n"%(np.mean(cv_scores), np.std(cv_scores)))
+                    model2 = hmm.GaussianHMM(n_components=n, covariance_type=cov)
+                    model2.fit([X_train])
+                    pred_labels = model2.predict(X_train)
 
-        print("Test score is %.2f. \n"
-              "============================\n"%model2.score(ftest))
+                    ## get out those labels that are actually human classified
+                    classified_ind = np.where(y_train != "None")[0]
+                    #print(len(classified_ind))
 
+                    scores.append(model2.score(X_test))
+                    print("Score: " + str(model2.score(X_test)))
+                cv_scores = np.array(scores)
+                cv_means.append(np.mean(scores))
+                cv_std.append(np.std(scores))
 
-    hmm_results = {"cv_scores":cv_scores_all, "cv_means":cv_means,
-                   "cv_std":cv_std, "test_score":test_score}
+                model2 = hmm.GaussianHMM(n_components=n, covariance_type="full")
+                model2.fit([ftrain])
+                test_score.append(model2.score(ftest))
 
-    f = open(datadir+"grs1915_hmm_results.dat", "w")
-    pickle.dump(hmm_results, f)
-    f.close()
+                cv_scores_all.append(cv_scores)
+                #si_means.append(np.mean(si_scores))
+                #si_std.append(np.mean(si_scores))
+                ## print mean and standard deviation of the 10 cross-validated scores
+                print("Cross-validation score is %.2f +- %.4f. \n"
+                      "============================================\n"%(np.mean(cv_scores), np.std(cv_scores)))
+
+                print("Test score is %.2f. \n"
+                      "============================\n"%model2.score(ftest))
+
+            hmm_results = {"cv_scores":cv_scores_all, "cv_means":cv_means,
+                           "cv_std":cv_std, "test_score":test_score}
+
+            covar_results[cov] = hmm_results
+
+        f = open(datadir+"grs1915_%is_hmm_results.dat"%int(seg), "w")
+        pickle.dump(covar_results, f)
+        f.close()
 
     return
 

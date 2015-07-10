@@ -750,6 +750,8 @@ def extract_all(d_all, seg_length_all=[256., 1024.], overlap=128.,
                 k = 10, lamb=0.1,
                 datadir="./"):
 
+    print("seg_length: " + str(seg_length_all))
+    print("overlap: " + str(overlap))
 
     for sl in seg_length_all:
         print("%i segments, summary"%int(sl))

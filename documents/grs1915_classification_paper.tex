@@ -103,11 +103,11 @@ We use the $3 - 13$ keV band for all time series and power spectral features, an
 \section{Feature Engineering and Supervised Classification}
 
 Feature engineering is the most important and most difficult part of any machine learning problem. It is here where domain knowledge of the problem at hand becomes crucial to finding the most informative features to be used by the computer in the subsequent classification task. 
-We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves in three energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
+We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves ($\delta t = 0.125 \,\mathrm{s}$) in four energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
 
 \subsection{Time Series Features}
 
-Because it is difficult to encapsulate the large variety of shapes observed in the light curves of GRS 1915+105, we restrict ourselves here to a small and simple feature set: the mean count rate, median count rate and total variance in the light curve segment in the $3 - 13$ keV band. 
+Because it is difficult to encapsulate the large variety of shapes observed in the light curves of GRS 1915+105, we use a mix of very simple summary features and extract a number of features from a linear model. The summary features are: the mean count rate, median count rate, total variance, skewness and kurtosis in the light curve segment in the $3 - 13$ keV band. 
 
 
 
