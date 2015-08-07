@@ -69,7 +69,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         i.e. by default light curves start 64 seconds apart. The actual overlap is
         seg_length-overlap
     """
-    segments, labels = [], [] ## labels for labelled data
+    segments, labels, nsegments = [], [], [] ## labels for labelled data
 
     for i,d_seg in enumerate(d_all):
 
@@ -106,12 +106,13 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
             iend += noverlap
             j+=1
 
+        nsegments.append(j)
 
     ## convert labels to strings so I don't have a weird
     ## combination of None objects and strings
     labels = np.array([str(l) for l in labels])
 
-    return segments, labels
+    return segments, labels, np.array(nsegments)
 
 def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_frac = 0.25,
                   seg=True, seg_length=1024., overlap = 128.):
@@ -133,23 +134,26 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
         d_all_train  = d_all_train + d_all_val
 
     if seg:
-        seg_train, labels_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
-        seg_test, labels_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
+        seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
+        seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
 
         if val:
-            seg_val, labels_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
+            seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
 
 
     else:
         seg_train = [d[0] for d in d_all_train]
         labels_train = [d[1] for d in d_all_train]
+        nseg_train = [1 for d in d_all_train]
 
         seg_test = [d[0] for d in d_all_test]
         labels_test = [d[1] for d in d_all_test]
+        nseg_test = [1 for d in d_all_test]
 
         if val:
             seg_val = [d[0] for d in d_all_val]
             labels_val = [d[1] for d in d_all_val]
+            nseg_val = [1 for d in d_all_val]
 
 
         ## Let's print some details on the different segment data sets
@@ -171,9 +175,12 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
             print("================================================================")
 
     if val:
-        return [[seg_train, labels_train], [seg_val, labels_val], [seg_test, labels_test]]
+        return [[seg_train, labels_train, nseg_train],
+                [seg_val, labels_val, nseg_val],
+                [seg_test, labels_test, nseg_test]]
     else:
-        return [[seg_train, labels_train], [seg_test, labels_test]]
+        return [[seg_train, labels_train, nseg_train],
+                [seg_test, labels_test, nseg_test]]
 
 ######################################################################################################################
 #### FUNCTIONS FOR FEATURE EXTRACTION ################################################################################
@@ -587,6 +594,9 @@ def make_features(seg, k=10, bins=30, lamb=None,
 def check_nan(features, labels, hr=True, lc=True):
     inf_ind = []
     fnew, lnew, tnew = [], [], []
+
+    nseg = features["nseg"]
+    nsum = np.array([np.sum(nseg[:i])-1 for i in xrange(1, len(nseg)+1)])
     if lc:
         lcnew = []
     if hr:
@@ -597,9 +607,13 @@ def check_nan(features, labels, hr=True, lc=True):
         try:
             if any(np.isnan(f)):
                 print("NaN in sample row %i"%i)
+                aind = np.array(nsum).searchsorted(i)
+                nseg[aind] -= 1
                 continue
             elif any(np.isinf(f)):
                 print("inf sample row %i"%i)
+                aind = np.array(nsum).searchsorted(i)
+                nseg[aind] -= 1
                 continue
             else:
                 fnew.append(f)
@@ -613,7 +627,7 @@ def check_nan(features, labels, hr=True, lc=True):
             print("f: " + str(f))
             print("type(f): " + str(type(f)))
             raise Exception("This is breaking! Boo!")
-    features_new = {"features":fnew, "tstart":tnew}
+    features_new = {"features":fnew, "tstart":tnew, "nseg":nseg}
     if lc:
         features_new["lc"] = lcnew
     if hr:
@@ -641,8 +655,10 @@ def make_all_features(d_all, k=10, lamb=0.1,
     d_all_train = d_all[:int(train_frac*n_lcs)]
     d_all_test = d_all[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]
 
-    seg_train, labels_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
-    seg_test, labels_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
+    seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length,
+                                                           overlap=overlap)
+    seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length,
+                                                        overlap=overlap)
 
     tstart_train = np.array([s[0,0] for s in seg_train])
     tstart_test = np.array([s[0,0] for s in seg_test])
@@ -650,7 +666,8 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     if val:
         d_all_val = d_all[int((train_frac + test_frac)*n_lcs):]
-        seg_val, labels_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
+        seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length,
+                                                         overlap=overlap)
         tstart_val = np.array([s[0,0] for s in seg_val])
 
 
@@ -666,6 +683,9 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     features_train["tstart"] = tstart_train
     features_test["tstart"] = tstart_test
+
+    features_train["nseg"] = nseg_train
+    features_test["nseg"] = nseg_test
     #features_train = np.concatenate((tstart_train, features_train))
     #features_test = np.concatenate((tstart_test, features_test))
 
@@ -675,9 +695,11 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     ## check for NaN
     print("Checking for NaN in the training set ...")
-    features_train_checked, labels_train_checked = check_nan(features_train, labels_train, hr=hr, lc=lc)
+    features_train_checked, labels_train_checked = check_nan(features_train, labels_train,
+                                                             hr=hr, lc=lc)
     print("Checking for NaN in the test set ...")
-    features_test_checked, labels_test_checked = check_nan(features_test, labels_test, hr=hr, lc=lc)
+    features_test_checked, labels_test_checked= check_nan(features_test, labels_test,
+                                                          hr=hr, lc=lc)
 
 
     labelled_features = {"train": [features_train_checked["features"], labels_train_checked],
@@ -687,6 +709,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
         features_val = make_features(seg_val, k, bins, lamb, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
         #features_val = np.concatenate((tstart_val, features_val))
         features_val["tstart"] = tstart_val
+        features_val["nseg"] = nseg_val
 
         features_val_checked, labels_val_checked = check_nan(features_val, labels_val, hr=hr, lc=lc)
 
@@ -697,6 +720,8 @@ def make_all_features(d_all, k=10, lamb=0.1,
     if save_features:
         np.savetxt(froot+"_%is_features_train.txt"%int(seg_length), features_train_checked["features"])
         np.savetxt(froot+"_%is_features_test.txt"%int(seg_length), features_test_checked["features"])
+        np.savetxt(froot+"_%is_nseg_train.txt"%int(seg_length), features_train_checked["nseg"])
+        np.savetxt(froot+"_%is_nseg_test.txt"%int(seg_length), features_test_checked["nseg"])
 
         np.savetxt(froot+"_%is_tstart_train.txt"%int(seg_length), features_train_checked["tstart"])
         np.savetxt(froot+"_%is_tstart_test.txt"%int(seg_length), features_test_checked["tstart"])
@@ -715,6 +740,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
         if val:
             np.savetxt(froot+"_%is_features_val.txt"%int(seg_length), features_val_checked["features"])
             np.savetxt(froot+"_%is_tstart_val.txt"%int(seg_length), features_val_checked["tstart"])
+            np.savetxt(froot+"_%is_nseg_val.txt"%int(seg_length), features_val_checked["nseg"])
 
             lvalfile = open(froot+"_%is_labels_val.txt"%int(seg_length), "w")
             for l in labels_val_checked:
