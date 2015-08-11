@@ -17,14 +17,14 @@ def load_data(datadir="./", hr=False):
     :return: you know, stuff
     """
 
-## Load features and labels
-    features_train = np.loadtxt(datadir+"grs1915_1024_all_summary_features_train.txt")
-    features_val = np.loadtxt(datadir+"grs1915_1024_all_summary_features_val.txt")
-    features_test = np.loadtxt(datadir+"grs1915_1024_all_summary_features_test.txt")
+## Load features and label: grs1915_1024s_features_train.txts
+    features_train = np.loadtxt(datadir+"grs1915_1024s_features_train.txt")
+    features_val = np.loadtxt(datadir+"grs1915_1024s_features_val.txt")
+    features_test = np.loadtxt(datadir+"grs1915_1024s_features_test.txt")
 
-    labels_train = gt.conversion(datadir+"grs1915_1024_all_summary_labels_train.txt")[0]
-    labels_val = gt.conversion(datadir+"grs1915_1024_all_summary_labels_val.txt")[0]
-    labels_test = gt.conversion(datadir+"grs1915_1024_all_summary_labels_test.txt")[0]
+    labels_train = gt.conversion(datadir+"grs1915_1024s_labels_train.txt")[0]
+    labels_val = gt.conversion(datadir+"grs1915_1024s_labels_val.txt")[0]
+    labels_test = gt.conversion(datadir+"grs1915_1024s_labels_test.txt")[0]
 
 
     ## extract features according to ranking
