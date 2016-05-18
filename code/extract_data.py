@@ -376,6 +376,23 @@ def remove_nans(d_all):
 
     return d_all_new
 
+def add_total_countrate(d_all):
+    """
+    This function takes the "total" column and 
+    the "high band" column and adds them together 
+    since currently the "total" column only goes to
+    13 keV.
+
+    """
+    d_all_new = []
+    for data in d_all:
+       lcs = data[0]
+       lcs[:,1] = lcs[:,1] + lcs[:,-1]
+       d_all_new.append([lcs, data[1]])
+   
+    return d_all_new
+
+
 
 def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125):
     """
@@ -401,6 +418,8 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
     d_all = extract_obsmode_data(files, bin_data=True, bin_res=bin_res, label_only=clean, labels="clean")
 
     d_all_new = remove_nans(d_all)
+    d_all_new = add_total_countrate(d_all_new)
+ 
     if clean:
         outfile = "grs1915_clean_label_%ims.dat"%int(bin_res*1000.0)
     else:
