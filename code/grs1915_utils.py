@@ -284,9 +284,9 @@ def plot_classified_lightcurves(tstart, labels, nlc=20, namestr="test", datadir=
 
     d_ind = np.array(range(len(d_all)))
     np.random.shuffle(d_ind)
-    d_all_shuffled = [d_all[i] for i in d_ind]
+    d_all_shuffled = [d_all[i] for i in d_ind[:nlc]]
  
-    for i,d in enumerate(d_all_shuffled[:nlc]):
+    for i,d in enumerate(d_all[:nlc]):
         print("i = %i"%i)
         data = d[0]
         times = data[:,0]
@@ -334,7 +334,6 @@ def transition_matrix(times, labels, gapsize, namestr="test", datadir="./"):
     label_set = np.unique(labels)
     labels_numeric = np.array([np.where(l == label_set)[0][0] for l in labels])
 
-
     ## stack labels and start times
     time_labels = np.vstack((times, labels_numeric))
 
@@ -345,7 +344,6 @@ def transition_matrix(times, labels, gapsize, namestr="test", datadir="./"):
     ## compute the difference between starting points of consecutive
     ## segments in seconds
     dt = np.diff(tl_sorted[:,0])
-
     ## find all indices where segments are more than 1024 seconds apart
     breakind = np.where(dt > gapsize)[0]
 
@@ -360,7 +358,6 @@ def transition_matrix(times, labels, gapsize, namestr="test", datadir="./"):
     ## number of unique states
     nlabels = len(label_set)
 
-
     ## compute transitions between neighbouring states
     ## for all connected observation times
     b_all = []
@@ -372,7 +369,6 @@ def transition_matrix(times, labels, gapsize, namestr="test", datadir="./"):
 
         b_all.append(b)
 
-
     b_all = np.array(b_all)
     b = np.sum(b_all, axis=0)
 
@@ -381,11 +377,11 @@ def transition_matrix(times, labels, gapsize, namestr="test", datadir="./"):
     #b /= np.sum(b, axis=0)
 
     plt.figure()
-    plt.matshow(b, cmap=cmap.Spectral_r)
+    plt.matshow(np.log(b), cmap=cmap.Spectral_r)
     plt.xlabel("Transition to state")
     plt.ylabel("Transition from state")
 
     plt.savefig(datadir+namestr+"_transitionmatrix.pdf", format="pdf")
-    plt.close()
+    #plt.close()
 
     return
