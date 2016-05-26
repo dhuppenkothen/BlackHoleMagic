@@ -102,13 +102,42 @@ We use the $3 - 13$ keV band for all time series and power spectral features, an
 
 \section{Feature Engineering and Supervised Classification}
 
+While some machine learning algorithms can produce reliable classifications on raw data (e.g. a light curve), these algorithms generally require a very large amount of data of the order of tens of millions of data points or more. 
+For most problems in X-ray astronomy, there is not enough data available to make using these methods feasible. Algorithms that work on relatively small data sets exist, but they generally work better with data with fewer dimensions. Therefore, we extract \textit{features} for each data \textit{sample}. 
+Here, a sample is a single instance of the ensemble to be classified, in our case an RXTE light curve of GRS1915+105, or perhaps a short interval of a light curve. Depending on the length of that interval or light curve, the raw data might have tens of thousands of data points, corresponding to a high-dimensional vector in feature space. We reduce the number of dimensions by extracting features, descriptive summaries of the raw data that will allow for efficient separation of the various classes in feature-space. 
+
 Feature engineering is the most important and most difficult part of any machine learning problem. It is here where domain knowledge of the problem at hand becomes crucial to finding the most informative features to be used by the computer in the subsequent classification task. 
-We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves ($\delta t = 0.125 \,\mathrm{s}$) in four energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
+We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves ($\Delta t = 0.125 \,\mathrm{s}$) in four energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
+
+Ideally, we would like to use segments of the same length in order to avoid systematic biases in our features (which, in the case of summary statistics, might depend on the number of data points in the light curve) and because some features are structured such that light curves of different duration give feature vectors of different lengths, making the later classification task vastly more complex. The ideal duration of the segments to be used is an open \testit{hyperparameter} in the problem, and thus has to be estimated during the classification procedure. There is a trade-off between descriptiveness and sample completeness: when choosing long segments, we likely encapsulate more of the characteristic behaviour of a state, which can sometimes consist of cycles lasting more than a thousand seconds. On the other hand, if we choose long segments, we necessarily exclude all light curves that are shorter than that, for example because their Good Time Intervals (GTIs) only allowed for shorter segments. We adopt an approach where we test our supervised learning algorithms below with segments varying in duration from $16\,\mathrm{s}$ to $1024\,\mathrm{s}$ with a procedure laid out in more detail in Section \ref{sec:freeparams}.
 
 \subsection{Time Series Features}
 
 Because it is difficult to encapsulate the large variety of shapes observed in the light curves of GRS 1915+105, we use a mix of very simple summary features and extract a number of features from a linear model. The summary features are: the mean count rate, median count rate, total variance, skewness and kurtosis in the light curve segment in the $3 - 13$ keV band. 
 
+The light curves observed from GRS1915+105 show a very rich variability behaviour that includes complex patterns not well represented by the summary features listed above. Encapsulating these complex variability patterns in a few parameters is difficult for a variety of reasons. Any method must be able to encode complex patterns in just a few parameters. At the same time, it must be shift-invariant. That is, for roughly periodic patterns, features should look very similar regardless of where in the cycle a light curve begins. We attempt to encapsulate the variability in a simple linear model, where the data $y_t$ at any given point in the light curve $t$ depends on a linear combination of $k$ data points immediately before:
+
+\begin{equation}
+y_{t+1} = \langle w, X_{t+1} \rangle \, ,
+\end{equation}
+
+\noindent  where $w$ is a vector of lengths $k$ specifying the weights and $X_{t+1} = y_{t-k:t}$ is a vector containing the data points between steps $t-k$ and $t$.
+We minimize the following equation with respect to the weight vector $w$ to infer the optimal weights:
+
+\begin{equation}
+\min_w ||\langle w, X \rangle - y||^2 + \lambda ||w||^2 \; ,
+\end{equation}
+
+\noindent where $\lambda$ is a regularization parameter that controls for overfitting of the data. The parameter $k$ defining the number of data points relevant in determining the data point $y_{t+1}$ and consequently the number of weights is a free parameter to be estimated (see Section \ref{sec:freeparams} below.
+
+\subsection{Power Spectral Features}
+
+\subsection{Hardness Ratio Features}
+
+\subsection{Feature Selection and Supervised Classification}
+
+\subsubsection{Free Parameters and Cross-validation}
+label{sec:freeparams}
 
 
 \section{Unsupervised Classification}
