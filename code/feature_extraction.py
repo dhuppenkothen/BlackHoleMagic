@@ -17,11 +17,7 @@ import linearfilter
 np.random.seed(20150608)
 
 
-import lightcurve
-import powerspectrum
-
-import powerspectrum
-
+from BayesPSD import lightcurve, powerspectrum
 
 def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25):
 
@@ -357,13 +353,16 @@ def total_psd(seg, bins):
     counts = seg[:,1]*dt
 
     ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
-    ps.ps = np.array(ps.freq)*np.array(ps.ps)
-    binfreq = np.logspace(np.log10(ps.freq[1]-epsilon), np.log10(ps.freq[-1]+epsilon), bins)
+    #ps.ps = np.array(ps.freq)*np.array(ps.ps)
+    #binfreq = np.logspace(np.log10(ps.freq[1]-epsilon), np.log10(ps.freq[-1]+epsilon), bins)
     #print("freq: " + str(ps.freq[1:10]))
     #print("binfreq: " + str(binfreq[:10]))
-    binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
-    df = binfreq[1:]-binfreq[:-1]
-    binfreq = binfreq[:-1]+df/2.
+    #binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
+    #df = binfreq[1:]-binfreq[:-1]
+    #binfreq = binfreq[:-1]+df/2.
+    binfreq, binps, binsamples = ps.rebin_log()
+    bkg = np.mean(ps.ps[-100:])
+    binps -= bkg
 
     return np.array(binfreq), np.array(binps)
 
