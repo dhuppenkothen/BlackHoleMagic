@@ -21,7 +21,7 @@ def convert_obsids(states):
 def convert_belloni_clean(turned=True):
     ## cleaned version; without observations that have light curves
     ## with more than one class
-    file = open("1915Belloniclass.dat")
+    file = open("1915Belloniclass_updated.dat")
     lines = file.readlines()
     header = lines[0].split()
     belloni_clean = {}

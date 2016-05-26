@@ -239,10 +239,11 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
     """
 
     if labels == "clean":
+        belloni_turned = convert_belloni.convert_belloni_clean()
+    else:
         belloni_states = convert_belloni.main()
         belloni_turned = convert_belloni.turn_states(belloni_states)
-    else:
-        belloni_turned = convert_belloni.convert_belloni_clean()
+
 
     d_all = []
     for f in files:
