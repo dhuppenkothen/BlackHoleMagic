@@ -51,15 +51,7 @@
   \altaffiltext{1}{Center for Data Science, New York University, 726 Broadway, 7th Floor, New York, NY 10003}
   \altaffiltext{2}{Center for Cosmology and Particle Physics, Department of Physics, New York University, 4 Washington Place, New York, NY 10003, USA}
   \altaffiltext{3}{E-mail: daniela.huppenkothen@nyu.edu}
-  \altaffiltext{4}{Anton Pannekoek Institute for Astronomy, University of
-  Amsterdam, Postbus 94249, 1090 GE Amsterdam, the Netherlands}
-%  \altaffiltext{5}{Department of Statistics, The University of Auckland, Private Bag 92019, Auckland 1142, New Zealand}
-%\altaffiltext{6}{School of Informatics, University of Edinburgh}
-%\altaffiltext{7}{School of Engineering and Computer Science, Victoria University of Wellington, New Zealand}
-%\altaffiltext{8}{Monash Center for Astrophysics and School of Physics, Monash University, Clayton, Victoria 3800, Australia}
-%\altaffiltext{9}{Astrophysics Office, ZP 12, NASA/Marshall Space Flight Center, Huntsville, AL 35812, USA}
-%\altaffiltext{10}{NSSTC, 320 Sparkman Drive, Huntsville, AL 35805, USA}
-
+  
 
 \begin{abstract}
 .
@@ -70,7 +62,21 @@
 
 \section{Introduction}
 
-Some stuff about black holes. Also, perhaps the total ASM light curve.
+Black hole X-ray binaries (BHXRBs), systems containing a stellar-mass black hole and a main-sequence companion, are some of the best test cases of fundamental physics, including tests of general relativity in strong gravity, plasma physics in accretion discs and particle acceleration in astrophysical jets. 
+Due to the relative simplicity of black hole mass scaling, they may also be seen as smaller analogues to their super-massive counterparts in Active Galactive Nuclei (AGN), by providing a window into physical processes on much shorter time scales and at much higher observable fluxes.
+Among the known BHXRBs, GRS 1915+105 holds a special position. Discovered as a bright, $0.35$ Crab X-ray source \citep{castrotirado1994} with the WATCH all-sky monitor on the GRANAT space telescope \citep{castrotirado1992}, it also became known as the first galactic source known to exhibit superluminal jets \citep{mirabel1994, fender1999} and was hence termed a `microquasar` for its similarities to its supermassive counterparts. 
+Despite being highly absorbed, optical identification of a K-M III type non-degenerate companion with the Very Large Telescope allowed a mass estimate of $14\pm 4\,M_\odot$ \citep{greiner2001}, recently revised via trigonometric parallax to a slightly lower mass of $12.4^{+2.0}_{-1.8}\, M_\odot$ and a distance of $8.6^{+2.0}_{-1.6}\,\mathrm{kpc}$ \citep{reid2014}. 
+Since its discovery in 1994, GRS 1915+105 has been monitored repeatedly with instruments across all wavelengths, providing the first solid evidence of a coupling between accretion disc and jet: hard X-ray dips in the complex light curves of GRS 1915+105 were found to be associated with bright events at infrared and radio wavelengths \citep{pooley1997, eikenberry1998a, eikenberry1998b, kleinwolt2002}. Additionally, steady jets seem to be present during periods of prolonged hard X-ray emission \citep{foster1996, dhawan2000, fucs2003}. 
+
+What sets GRS 1915+105 apart from the remaining sources in the sample of known BHXRBs is its X-ray variability. Variability in both flux and spectrum is expected from these sources since their accretion disc likely undergoes turbulence driven by magnetic instabilities. However, GRS 1915+105 is known to exhibit complex X-ray light curves spanning at least 14 different patterns \citep{belloni2000, kleinwolt2002, hannikainen2003, hannikainen2005}. These complex patterns are known to repeat almost identically, sometimes with months to years between occurrences. It was thought to be unique in its behaviour until the fairly recent detection of a second source, IGR J17091-3624 \citep{altamirano2011}, exhibiting similar variability patterns. 
+These patterns, going hand-in-hand with spectral changes on short time-scales, are difficult to model in practice.  Yet understanding the origin and formation of these variability patterns is crucial, as they are clearly not random and encode information about the accretion disc. \citet{belloni2000} suggested that all variability patterns decompose into three basic states, termed A, B and C, based on spectral and variability characteristics. These three fundamental states seem to roughly correspond to similar spectral and variability properties in other BHXRBs, in particular to the low-hard state (LHS; state C in GRS 1915+105) and the very high state (VHS; states A and B). 
+
+While \citet{belloni2000} point out that their state classification is mainly intended for easy categorization of observations, it is clear that the observed variability patterns are intimately linked to the underlying accretion physics. \citet{naik2002} observed that certain variability classes are preferably observed before and after prolonged intervals of the source in a type-C state with a hard spectrum, indicating that there exists a connection between the states as classified by \citet{belloni2000} and the long-term behaviour of the source, which may possibly be linked to mass accretion rate. If this is the case, then the complex variability leads to interesting prospects for studying accretion disc dynamics at high mass accretion rates. 
+For example, \citet{misra2004, misra2006} grouped the original 14 classes into three individual groups based on an analysis of the correlation dimension, a proxy for distinguishing stochastic from chaotic or non-linear deterministic behaviour. They found representatives of all three possibilities, with four of the original classes showing chaotic behaviour ($\beta$, $\lambda$, $\kappa$, $\mu$), five showing non-linear deterministic behaviour ($\theta$, $\rho$, $\alpha$, $\nu$, $\delta$) and three exhibiting purely stochastic behaviour ($\phi$, $\gamma$, $\chi$). The results were recently confirmed by \citet{sukova2016} using recurrence analysis and indicate a complex interplay between the governing physical properties---e.g.\ mass accretion rate and viscosity---and the observable X-ray emission. 
+It is likely that the complex, recurring variability patterns are driven by global instabilities in the accretion disc, i.e.\ non-linear, deterministic processes governed by the global dynamical evolution of the accretion disc and driven by a few global parameters, for example the accretion rate. In a similar light, \citet{massaro2014} show that the striking patterns observed in the $\rho$ state, also named `heartbeat` state for its quasi-periodic pulses, can be described by a limit cycle caused by a fairly simple system of non-linear ordinary differential equation. Their model indicates that the burst recurrence time largely depends on a parameter steering the forcing in the system, and suggest that either variations in the mass accretion rate or viscosity may act as the driving force behind the observed oscillations in this state, in line with hydrodynamic simulations \citep{nayakshin2000, merloni2006} and detailed observations of spectral changes \citep{neilsen2010, 2011}.
+
+It is clear that the state changes in GRS1915+105 must in some way depend on global properties of the accretion disc, and can thus act as probes of physical processes within the disc as well as the coupling between the disc and the jet. Thus, understanding the properties of these states and the long-term evolution of GRS 1915+105 is of crucial importance. However, studies to date largely concentrate on either individual states or subsets of the available data. 
+Here, we present a study of the full 16-year data set of GRS1915+105 observed with the Proportional Counter Array (PCA) onboard the \textit{Rossi X-ray Timing Explorer} (\rxte). We choose a novel machine learning approach to characterizing and classifying the states in GRS 1915+105, and subsequently use a time-dependent Hidden Markov Model (HMM) to help us understand the global structure of variability in GRS 1915+105 over the full sixteen years of observations.
 
 \section{Observations and Data Preparation}
 
@@ -89,26 +95,70 @@ sample with high coverage in time, albeit with a bias toward active periods of t
 \begin{center}
 \includegraphics[width=9cm]{obs_duration.pdf}
 \caption{Histogram of the durations of all observations used in the analysis. Most observations have durations of $1000$ --- $5000$ seconds, few are significantly longer. Note that these reflect total durations for a given observation without application of Good Time Intervals (GTIs); in the analysis below, these durations may be shortened or split in parts by detector failures and the motion of the space craft ({\bf Lucy: I think there is something about the RXTE orbit that gives observations a natural upper limit?}.}
-\label{fig:asm_total}
+\label{fig:obsdurations}
 \end{center}
 \end{figure}
 
 
-We extracted light curves in $4$ energy bands: $3 - 13$ keV, $3 - 6$ keV, $9 - 15$ keV, and $15 - 75$ keV. While the energy ranges will not be exactly the same from light curve to light curve due to the gradual changes in the sensitivity of individual channels over time, we have taken care to keep the energy ranges as constant as possible, including and excluding channels as necessary. All light curves have a time resolution of $0.125$ seconds. We include a total of $1711$ observations in the analysis. 
-We split the observations in training, validation and test data sets, with $60\%$ of observations in the training set and $20\%$ of all observations in the validation and test sets each. 
-Each observation is split into segments of $1024\,\mathrm{s}$ duration, starting every $128\,\mathrm{s}$ apart. This leads to overlaps between consecutive segments, but augments the relatively small data set and ensures that we are sensitive to within-state changes in light curve properties. We note that we repeated the analysis below with both shorter and longer segment sizes. For shorter segment sizes, changes in the light curve and energy properties within states leads to increased uncertainty in the classification, for longer segments, the training set becomes too small to properly train the model, thus leading to an increase in mis-classifications.
+We extracted light curves in $4$ energy bands: $3 - 75$ keV, $3 - 6$ keV, $9 - 15$ keV, and $15 - 75$ keV. While the energy ranges will not be exactly the same from light curve to light curve due to the gradual changes in the sensitivity of individual channels over time, channels were included or excluded as necessary to keep the energy ranges as constant as possible. All light curves have a time resolution of $0.125$ seconds. We include a total of $1711$ observations in the analysis. 
+Figure \ref{fig:obsdurations} shows a histogram of the durations of individual observations. Most observations have a duration of $\sim\!2000 \,\mathrm{s}$, with only a small subset being significantly longer.
+In practice, many light curves will be shorter, since data drop-outs and interruptions in the observations lead to good time intervals that are shorter than the nominal observation time. This is an important limitation to keep in mind, given that many of the patterns observed in the light curves of GRS 1915+105 tend to be of the order of $\sim\! 1000 \,\mathrm{s}$ long.  
+
+%
+%Each observation is split into segments of $1024\,\mathrm{s}$ duration, starting every $128\,\mathrm{s}$ apart. This leads to overlaps between consecutive segments, but augments the relatively small data set and ensures that we are sensitive to within-state changes in light curve properties. We note that we repeated the analysis below with both shorter and longer segment sizes. For shorter segment sizes, changes in the light curve and energy properties within states leads to increased uncertainty in the classification, for longer segments, the training set becomes too small to properly train the model, thus leading to an increase in mis-classifications.
 
 We use the $3 - 13$ keV band for all time series and power spectral features, and form two hardness ratios that encode energy spectral changes between states. Hardness ratio 1 (HR1) is defined as $\mathrm{HR}1 = $.
 
 \section{Feature Engineering and Supervised Classification}
 
+While some machine learning algorithms can produce reliable classifications on raw data (e.g. a light curve), these algorithms generally require a very large amount of data of the order of tens of millions of data points or more. 
+For most problems in X-ray astronomy, there is not enough data available to make using these methods feasible. Algorithms that work on relatively small data sets exist, but they generally work better with data with fewer dimensions. Therefore, we extract \textit{features} for each data \textit{sample}. 
+Here, a sample is a single instance of the ensemble to be classified, in our case an RXTE light curve of GRS1915+105, or perhaps a short interval of a light curve. Depending on the length of that interval or light curve, the raw data might have tens of thousands of data points, corresponding to a high-dimensional vector in feature space. We reduce the number of dimensions by extracting features, descriptive summaries of the raw data that will allow for efficient separation of the various classes in feature-space. 
+
 Feature engineering is the most important and most difficult part of any machine learning problem. It is here where domain knowledge of the problem at hand becomes crucial to finding the most informative features to be used by the computer in the subsequent classification task. 
-We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves ($\delta t = 0.125 \,\mathrm{s}$) in four energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
+We used the previous (human-based) classification by \citet{belloni2000} to guide the feature engineering task. With relatively high-resolution light curves ($\Delta t = 0.125 \,\mathrm{s}$) in four energy bands, there is a multitude of possible features in time, energy and frequency domains that could potentially inform our choices. Because \citet{belloni2000} based their classification on the hardness ratios and overall appearance of the light curves, we start with similar reasoning and supplement the feature set derived from the time series and hardness ratios with properties of the power spectrum. 
+
+Ideally, we would like to use segments of the same length in order to avoid systematic biases in our features (which, in the case of summary statistics, might depend on the number of data points in the light curve) and because some features are structured such that light curves of different duration give feature vectors of different lengths, making the later classification task vastly more complex. The ideal duration of the segments to be used is an open \textit{hyperparameter} in the problem, and thus has to be estimated during the classification procedure. There is a trade-off between descriptiveness and sample completeness: when choosing long segments, we likely encapsulate more of the characteristic behaviour of a state, which can sometimes consist of cycles lasting more than a thousand seconds. On the other hand, if we choose long segments, we necessarily exclude all light curves that are shorter than that, for example because their Good Time Intervals (GTIs) only allowed for shorter segments. We adopt an approach where we test our supervised learning algorithms below with segments varying in duration from $16\,\mathrm{s}$ to $1024\,\mathrm{s}$ with a procedure laid out in more detail in Section \ref{sec:freeparams}.
 
 \subsection{Time Series Features}
 
 Because it is difficult to encapsulate the large variety of shapes observed in the light curves of GRS 1915+105, we use a mix of very simple summary features and extract a number of features from a linear model. The summary features are: the mean count rate, median count rate, total variance, skewness and kurtosis in the light curve segment in the $3 - 13$ keV band. 
 
+The light curves observed from GRS1915+105 show a very rich variability behaviour that includes complex patterns not well represented by the summary features listed above. Encapsulating these complex variability patterns in a few parameters is difficult for a variety of reasons. Any method must be able to encode complex patterns in just a few parameters. At the same time, it must be shift-invariant. That is, for roughly periodic patterns, features should look very similar regardless of where in the cycle a light curve begins. We attempt to encapsulate the variability in a simple linear model, where the data $y_t$ at any given point in the light curve $t$ depends on a linear combination of $k$ data points immediately before:
+
+\begin{equation}
+y_{t+1} = \langle w, X_{t+1} \rangle \, ,
+\end{equation}
+
+\noindent  where $w$ is a vector of lengths $k$ specifying the weights and $X_{t+1} = y_{t-k:t}$ is a vector containing the data points between steps $t-k$ and $t$.
+We minimize the following equation with respect to the weight vector $w$ to infer the optimal weights:
+
+\begin{equation}
+\min_w ||\langle w, X \rangle - y||^2 + \lambda ||w||^2 \; ,
+\end{equation}
+
+\noindent where $\lambda$ is a regularization parameter that controls for overfitting of the data. The parameter $k$ defining the number of data points relevant in determining the data point $y_{t+1}$ and consequently the number of weights is a free parameter to be estimated (see Section \ref{sec:freeparams} below).
+
+\subsection{Add Autoencoder?}
+
+\subsection{Power Spectral Features}
+
+Power spectral features are based on \citep{heil2014}. We compute power spectra in fractional rms normalization for all available light curves and integrate over frequencies in order to compute the fractional rms amplitude in different frequency bands. 
+Following the power colours defined in \citet{heil2014}, we choose our bands to be $P_\mathrm{A} = 0.0039-0.031 \,\mathrm{Hz}$, 
+$P_\mathrm{B} = 0.031-0.25 \,\mathrm{Hz}$, $P_\mathrm{C} =  0.25-2.0 \,\mathrm{Hz}$ and $P_\mathrm{D} = 2.0-16.0 \,\mathrm{Hz}$. We also construct power colours $\mathrm{PC}_1 = P_\mathrm{C}/P_\mathrm{A}$ and  $\mathrm{PC}_2 = P_\mathrm{B}/P_\mathrm{D}$.
+
+Note, however, that for some band can only be defined for the longer segment sizes, which extend down to the relevant frequencies. Features 
+that cannot be computed for a given parametrization of the duration of each light curve will be left out from the procedure.
+
+\subsection{Hardness Ratio Features}
+
+
+
+\subsection{Feature Selection and Supervised Classification}
+We split the observations in training, validation and test data sets, with $60\%$ of observations in the training set and $20\%$ of all observations in the validation and test sets each. 
+
+\subsubsection{Free Parameters and Cross-validation}
+label{sec:freeparams}
 
 
 \section{Unsupervised Classification}

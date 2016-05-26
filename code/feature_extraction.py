@@ -17,11 +17,7 @@ import linearfilter
 np.random.seed(20150608)
 
 
-import lightcurve
-import powerspectrum
-
-import powerspectrum
-
+from BayesPSD import lightcurve, powerspectrum
 
 def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25):
 
