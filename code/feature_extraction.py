@@ -234,9 +234,6 @@ def rebin_psd(freq, ps, n=10, type='average'):
     bin_df = df*n
     binfreq = np.arange(nbins)*bin_df + bin_df/2.0 + freq[0]
 
-    #print("len(ps): " + str(len(ps)))
-    #print("n: " + str(n))
-
     nbins_new = int(len(ps)/n)
     ps_new = ps[:nbins_new*n]
     binps = np.reshape(np.array(ps_new), (nbins_new, int(n)))
@@ -266,30 +263,20 @@ def psd_features(seg, pcb):
     dt = np.min(dt)
 
     counts = seg[:,1]*dt
-    #ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
     freq, ps = make_psd(seg, navg=1)
-    #print("len(ps), before: " + str(len(ps)))
-    if times[-1]-times[0] >= 2.*128.0:
+    if times[-1]-times[0] >= 256.0:
         tlen = (times[-1]-times[0])
-        nrebin = np.round(tlen/128.)
+        nrebin = np.round(tlen/256.)
         freq, ps = rebin_psd(freq, ps, n=nrebin, type='average')
 
-    #print("len(ps), after: " + str(len(ps)))
 
     freq = np.array(freq[1:])
     ps = ps[1:]
-    #print("min(freq): " + str(np.min(freq)))
-    #print("max(freq): " + str(np.max(freq)))
-    #print("len(freq): " + str(len(freq)))
 
     binfreq, binps = total_psd(seg, 24)
 
-    #print("min(binps): " + str(np.min(binps)))
-    #print("max(binps): " + str(np.max(binps)))
-    fmax_ind = np.where(binps == np.max(binps))
-    #print("fmax_ind: " + str(fmax_ind))
+    fmax_ind = np.where(binfreq*binps == np.max(binfreq*binps))
     maxfreq = binfreq[fmax_ind[0]]
-    #print("maxfreq: " + str(maxfreq))
 
     ## find power in spectral bands for power-colours
     pa_min_freq = freq.searchsorted(pcb["pa_min"])
@@ -340,11 +327,7 @@ def make_psd(segment, navg=1):
             ps.ps = np.array(ps.ps)*ps.freq
             ps_all.append(ps.ps)
 
-        #print(np.array(ps_all).shape)
-
         ps_all = np.average(np.array(ps_all), axis=0)
-
-        #print(ps_all.shape)
 
     return ps.freq, ps_all
 
@@ -359,8 +342,6 @@ def total_psd(seg, bins):
     ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
     ps.ps = np.array(ps.freq)*np.array(ps.ps)
     binfreq = np.logspace(np.log10(ps.freq[1]-epsilon), np.log10(ps.freq[-1]+epsilon), bins)
-    #print("freq: " + str(ps.freq[1:10]))
-    #print("binfreq: " + str(binfreq[:10]))
     binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
     df = binfreq[1:]-binfreq[:-1]
     binfreq = binfreq[:-1]+df/2.
@@ -396,7 +377,6 @@ def hr_maps(seg, bins=30, hrlimits=None):
     h = np.rot90(h)
     h = np.flipud(h)
     hmax = np.max(h)
-    #print(hmax)
     hmask = np.where(h > hmax/20.)
     hmask1 = np.where(h < hmax/20.)
     hnew = copy.copy(h)
@@ -412,20 +392,11 @@ def hr_fitting(seg):
     hr1 = mid_counts/low_counts
     hr2 = high_counts/low_counts
 
-    # compute the robust statistics
-    #(mu_r, sigma1_r,
-    # sigma2_r, alpha_r) = astroML.stats.fit_bivariate_normal(hr1, hr2, robust=True)
-    #if any(np.isnan(mu_r)) or np.isnan(sigma1_r) or np.isnan(sigma2_r) or np.isnan(alpha_r):
-    #    print("mu_r: " + str(mu_r))
-    #    print("sigma1_r: " + str(sigma1_r))
-    #    print("sigma2_r: " + str(sigma2_r))
-    #    print("alpha_r: " + str(alpha_r))
-    hr1_mask = np.where(np.isinf(hr1) == False)
-    #print(np.where(np.isinf(hr2) == False))
+    hr1_mask = np.where(np.isfinite(hr1) == True)
     hr1 = hr1[hr1_mask]
     hr2 = hr2[hr1_mask]
 
-    hr2_mask = np.where(np.isinf(hr2) == False)
+    hr2_mask = np.where(np.isfinite(hr2) == True)
     hr1 = hr1[hr2_mask]
     hr2 = hr2[hr2_mask]
 
@@ -487,15 +458,37 @@ def make_features(seg, k=10, bins=30, lamb=None,
                   hr_summary=True, ps_summary=True, lc=True, hr=True, hrlimits=None):
     """
     Make features from a set of light curve segments, except for the linear filter!
+    
+    Parameters
+    ----------
+    seg : iterable
+        list of all segments to be used
+        
+    bins : int
+        bins used in a 2D histogram if hr_summary is False
+        
+    hr_summary : bool
+        if True, summarize HRs in means and covariance matrix
+        
+    ps_summary : bool
+        if True, summarize power spectrum in frequency of maximum 
+        power and power spectral bands
+        
+    lc : bool
+        if True, store light curves
+        
+    hr : bool
+        if True, store hardness ratios
+        
+    hrlimits : iterable
+        limits for the 2D histogram if hr_summary is False
+    
+    Returns
+    -------
+    fdict : dictionary 
+        contains keywords "features", "lc" and "hr"
 
-    :param seg: list of all segments to be used
-    :param bins: bins used in a 2D histogram if hr_summary is False
-    :param hr_summary: if True, summarize HRs in means and covariance matrix
-    :param ps_summary: if True, summarize power spectrum in frequency of maximum power and power spectral bands
-    :param lc: if True, store light curves
-    :param hr: if True, store hardness ratios
-    :param hrlimits: limits for the 2D histogram if hr_summary is False
-    :return: fdict: dictionary with keywords "features", "lc" and "hr"
+
     """
     features = []
     if lc:
@@ -513,10 +506,10 @@ def make_features(seg, k=10, bins=30, lamb=None,
     ## to zero mean and unit variance
     ## We can do this for all light curves independently, because we're
     ## averaging *per light curve* and not *per time bin*
-    counts_scaled = StandardScaler().fit_transform(counts.T).T
+    # counts_scaled = StandardScaler().fit_transform(counts.T).T
 
     ## transform the counts into a weight vector
-    ww = linear_filter(counts_scaled, k=k)
+    ww = linear_filter(counts, k=k)
     
     for s in seg:
 
