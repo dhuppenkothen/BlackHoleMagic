@@ -86,7 +86,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         dt = np.min(dt_data)
 
         ## compute the number of time bins in a segment
-        nseg = seg_length/dt
+        nseg = np.round(seg_length/dt)
         ## compute the number of time bins to start of next segment
         noverlap = overlap/dt
 
@@ -94,7 +94,11 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         iend = nseg
         j = 0
 
-        while iend <= len(data):
+        while iend < len(data):
+            if iend-istart != nseg:
+                istart += noverlap
+                iend += noverlap
+                continue
             dtemp = data[istart:iend]
             segments.append(dtemp)
             labels.append(state)
@@ -616,7 +620,7 @@ def check_nan(features, labels, hr=True, lc=True):
             print("f: " + str(f))
             print("type(f): " + str(type(f)))
             raise Exception("This is breaking! Boo!")
-    features_new = {"features":fnew, "tstart":tnew, "nseg":nseg}
+    features_new = {"features":np.array(fnew), "tstart":tnew, "nseg":nseg}
     if lc:
         features_new["lc"] = lcnew
     if hr:
@@ -684,12 +688,17 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     ## check for NaN
     print("Checking for NaN in the training set ...")
+    print("%i samples in training data set before checking for NaNs."%features_train["features"].shape[0])
+    print("%i samples in test data set before checking for NaNs."%features_test["features"].shape[0])
+
     features_train_checked, labels_train_checked = check_nan(features_train, labels_train,
                                                              hr=hr, lc=lc)
     print("Checking for NaN in the test set ...")
     features_test_checked, labels_test_checked= check_nan(features_test, labels_test,
                                                           hr=hr, lc=lc)
 
+    print("%i samples in training data set after checking for NaNs."%features_train_checked["features"].shape[0])
+    print("%i samples in test data set before after for NaNs."%features_test_checked["features"].shape[0])
 
     labelled_features = {"train": [features_train_checked["features"], labels_train_checked],
                      "test": [features_test_checked["features"], labels_test_checked]}
@@ -700,11 +709,10 @@ def make_all_features(d_all, k=10, lamb=0.1,
         features_val["tstart"] = tstart_val
         features_val["nseg"] = nseg_val
 
+        print("Checking for NaN in the validation set ...")
         features_val_checked, labels_val_checked = check_nan(features_val, labels_val, hr=hr, lc=lc)
 
         labelled_features["val"] =  [features_val_checked["features"], labels_val_checked],
-
-    print("Checking for NaN in the validation set ...")
 
     if save_features:
         np.savetxt(froot+"_%is_features_train.txt"%int(seg_length), features_train_checked["features"])
