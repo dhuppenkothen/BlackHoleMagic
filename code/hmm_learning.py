@@ -71,6 +71,12 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
     tstart_test_full = np.loadtxt(datadir+"grs1915_%is_tstart_test.txt"%seg_length_unsupervised)
     tstart_val_full = np.loadtxt(datadir+"grs1915_%is_tstart_val.txt"%seg_length_unsupervised)
 
+
+    nseg_train_full = np.loadtxt(datadir+"grs1915_%is_nseg_train.txt"%seg_length_unsupervised)
+    nseg_test_full = np.loadtxt(datadir+"grs1915_%is_nseg_test.txt"%seg_length_unsupervised)
+    nseg_val_full = np.loadtxt(datadir+"grs1915_%is_nseg_val.txt"%seg_length_unsupervised)
+
+
     feature_ranking = [10, 16, 8, 1, 26, 24, 9, 7, 4, 22, 28, 11,
                        20, 2, 15, 5, 12, 30, 18, 0, 27, 25, 6, 19,
                        3, 23, 17, 13, 29, 21, 14]
@@ -94,8 +100,8 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
             features_new_train[:,i] = features_train_full[:,f]
             features_new_val[:,i] = features_val_full[:,f]
             features_new_test[:,i] = features_test_full[:,f]
-
     """
+   
     features_new_train = features_train_full
     features_new_val = features_val_full
     features_new_test = features_test_full
@@ -115,17 +121,20 @@ def load_data(seg_length_unsupervised=256., datadir="../../"):
     tstart_train = np.hstack((tstart_train_full, tstart_val_full))
     tstart_test = tstart_test_full
 
+    nseg_train = np.hstack((nseg_train_full, nseg_val_full))
+    nseg_test = nseg_test_full
+
     fscaled_train = np.vstack((tstart_train, fscaled_train.T)).T
     fscaled_test = np.vstack((tstart_test, fscaled_test.T)).T
+ 
+    #fscaled_train_sorted = fscaled_train[fscaled_train[:,0].argsort()]
+    #fscaled_test_sorted = fscaled_test[fscaled_test[:,0].argsort()]
 
-    fscaled_train_sorted = fscaled_train[fscaled_train[:,0].argsort()]
-    fscaled_test_sorted = fscaled_test[fscaled_test[:,0].argsort()]
+    #labels_train_sorted = labels_train[fscaled_train[:,0].argsort()]
+    #labels_test_sorted = labels_test[fscaled_test[:,0].argsort()]
 
-    labels_train_sorted = labels_train[fscaled_train[:,0].argsort()]
-    labels_test_sorted = labels_test[fscaled_test[:,0].argsort()]
-
-    return fscaled_train_sorted, fscaled_test_sorted, labels_train_sorted, labels_test_sorted
-
+    #return fscaled_train_sorted, fscaled_test_sorted, labels_train_sorted, labels_test_sorted
+    return fscaled_train, fscaled_test, labels_train, labels_test, nseg_train, nseg_test
 
 def run_hmm(max_comp=5, n_cv=10, datadir="./"):
     """
@@ -151,10 +160,10 @@ def run_hmm(max_comp=5, n_cv=10, datadir="./"):
 
     """
 
-    seg_length_all = [16., 64., 128., 256., 512., 1024.]
+    seg_length_all = [64., 128., 256., 512., 1024.]
 
     for seg in seg_length_all:
-        ftrain, ftest, ltrain, ltest = load_data(seg_length_unsupervised=seg)
+        ftrain, ftest, ltrain, ltest, ntrain, ntest = load_data(seg_length_unsupervised=seg)
 
         n_components = range(2,max_comp,1)
         ## run for up to 30 clusters
@@ -162,40 +171,74 @@ def run_hmm(max_comp=5, n_cv=10, datadir="./"):
 
         covar_results = {}
 
+
+        ftrain_seg = []
+        nind = 0
+        for n in ntrain:
+            ftrain_seg.append(ftrain[nind:nind+n])
+            nind += n
+     
+        ftrain_seg = np.array(ftrain_seg)
+
+
+        ftest_seg = []
+        nind = 0
+        for n in ntest:
+            ftest_seg.append(ftest[nind:nind+n])
+            nind += n
+
+        ftest_seg = np.array(ftest_seg)
+
+
+
         for cov in covar_types:
             cv_means, cv_std = [], []
             cv_scores_all = []
             test_score = []
-
+            aic_all, bic_all = [], []
             for n in n_components:
 
                 print("Cross validation for classification with %i states \n"
                       "--------------------------------------------------------"%n)
                 ## make the samples for 10-fold cross-validation
-                kf = cross_validation.KFold(ftrain.shape[0], n_folds=n_cv, shuffle=False)
+                kf = cross_validation.KFold(ntrain.shape[0], n_folds=n_cv, shuffle=False)
                 scores = []
+                aic_temp, bic_temp = [], [] 
                 ## run through all samples
                 for train, test in kf:
-                    X_train, X_test = ftrain[train, 1:], ftrain[test, 1:]
-                    y_train, y_test = ltrain[train], ltrain[test]
+                    nseg_train, nseg_test = ntrain[train], ntrain[test]
+
+                    X_train, X_test = ftrain_seg[train], ftrain_seg[test]
+                    X_train = np.vstack(X_train)
+                    X_test = np.vstack(X_test)
+                    X_train = X_train[:,1:]
+                    X_test = X_test[:,1:]
+
 
                     model2 = hmm.GaussianHMM(n_components=n, covariance_type=cov)
-                    model2.fit([X_train])
-                    pred_labels = model2.predict(X_train)
+		    try:
+                    	model2.fit(X_train, lengths=nseg_train)
 
-                    ## get out those labels that are actually human classified
-                    classified_ind = np.where(y_train != "None")[0]
-                    #print(len(classified_ind))
 
-                    scores.append(model2.score(X_test))
-                    print("Score: " + str(model2.score(X_test)))
+                    	scores.append(model2.score(X_test, lengths=nseg_test))
+                    	print("Score: " + str(model2.score(X_test, lengths=nseg_test)))
+                    	aic_temp.append(model2.aic(X_train))
+                    	bic_temp.append(model2.bic(X_train))
+		    except ValueError:
+			print("Matrix not positive definite!")
+                        scores.append(0.0)
+                        aic_temp.append(0.0)
+                        bic_temp.append(0.0)
+
                 cv_scores = np.array(scores)
                 cv_means.append(np.mean(scores))
                 cv_std.append(np.std(scores))
+                aic_all.append(aic_temp)
+                bic_all.append(bic_temp)
 
-                model2 = hmm.GaussianHMM(n_components=n, covariance_type="full")
-                model2.fit([ftrain])
-                test_score.append(model2.score(ftest))
+                model2 = hmm.GaussianHMM(n_components=n, covariance_type=cov)
+                model2.fit(ftrain, lengths=ntrain)
+                test_score.append(model2.score(ftest, lengths=ntest))
 
                 cv_scores_all.append(cv_scores)
                 #si_means.append(np.mean(si_scores))
@@ -205,10 +248,11 @@ def run_hmm(max_comp=5, n_cv=10, datadir="./"):
                       "============================================\n"%(np.mean(cv_scores), np.std(cv_scores)))
 
                 print("Test score is %.2f. \n"
-                      "============================\n"%model2.score(ftest))
+                      "============================\n"%model2.score(ftest, lengths=ntest))
 
             hmm_results = {"cv_scores":cv_scores_all, "cv_means":cv_means,
-                           "cv_std":cv_std, "test_score":test_score}
+                           "cv_std":cv_std, "test_score":test_score,
+                           "aic":aic_all, "bic":bic_all}
 
             covar_results[cov] = hmm_results
 
@@ -219,4 +263,4 @@ def run_hmm(max_comp=5, n_cv=10, datadir="./"):
     return
 
 
-run_hmm(31, n_cv=5, datadir="../../")
+run_hmm(10, n_cv=7, datadir="../../")

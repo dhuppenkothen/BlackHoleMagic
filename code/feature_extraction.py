@@ -715,6 +715,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
         labelled_features["val"] =  [features_val_checked["features"], labels_val_checked],
 
     if save_features:
+        print("Training features before saving: " + str(features_train_checked["features"].shape))
         np.savetxt(froot+"_%is_features_train.txt"%int(seg_length), features_train_checked["features"])
         np.savetxt(froot+"_%is_features_test.txt"%int(seg_length), features_test_checked["features"])
         np.savetxt(froot+"_%is_nseg_train.txt"%int(seg_length), features_train_checked["nseg"])
