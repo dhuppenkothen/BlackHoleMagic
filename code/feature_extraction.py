@@ -14,14 +14,10 @@ import linearfilter
 
 ## set the seed for the random number generator
 ## such that my "random choices" remain reproducible
-np.random.seed(20150608)
+np.random.seed(20160601)
 
 
-import lightcurve
-import powerspectrum
-
-import powerspectrum
-
+from BayesPSD import lightcurve, powerspectrum
 
 def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25):
 
@@ -357,13 +353,16 @@ def total_psd(seg, bins):
     counts = seg[:,1]*dt
 
     ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
-    ps.ps = np.array(ps.freq)*np.array(ps.ps)
-    binfreq = np.logspace(np.log10(ps.freq[1]-epsilon), np.log10(ps.freq[-1]+epsilon), bins)
+    #ps.ps = np.array(ps.freq)*np.array(ps.ps)
+    #binfreq = np.logspace(np.log10(ps.freq[1]-epsilon), np.log10(ps.freq[-1]+epsilon), bins)
     #print("freq: " + str(ps.freq[1:10]))
     #print("binfreq: " + str(binfreq[:10]))
-    binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
-    df = binfreq[1:]-binfreq[:-1]
-    binfreq = binfreq[:-1]+df/2.
+    #binps, bin_edges, binno = scipy.stats.binned_statistic(ps.freq[1:], ps.ps[1:], statistic="mean", bins=binfreq)
+    #df = binfreq[1:]-binfreq[:-1]
+    #binfreq = binfreq[:-1]+df/2.
+    binfreq, binps, binsamples = ps.rebin_log()
+    bkg = np.mean(ps.ps[-100:])
+    binps -= bkg
 
     return np.array(binfreq), np.array(binps)
 
@@ -644,7 +643,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
                       save_features=True, froot="grs1915"):
 
     ## Set the seed to I will always pick out the same light curves.
-    np.random.seed(20150608)
+    np.random.seed(20160601)
 
     ## shuffle list of light curves
     np.random.shuffle(d_all)
@@ -660,6 +659,15 @@ def make_all_features(d_all, k=10, lamb=0.1,
     seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length,
                                                         overlap=overlap)
 
+
+    states = [d[1] for d in d_all_train]
+    st = pd.Series(states)
+    print("The number of states in the training set is %i"%len(st.value_counts()))
+
+    states = [d[1] for d in d_all_test]
+    st = pd.Series(states)
+    print("The number of states in the test set is %i"%len(st.value_counts()))
+
     tstart_train = np.array([s[0,0] for s in seg_train])
     tstart_test = np.array([s[0,0] for s in seg_test])
 
@@ -670,6 +678,9 @@ def make_all_features(d_all, k=10, lamb=0.1,
                                                          overlap=overlap)
         tstart_val = np.array([s[0,0] for s in seg_val])
 
+        states = [d[1] for d in d_all_val]
+        st = pd.Series(states)
+        print("The number of states in the validation set is %i"%len(st.value_counts()))
 
     ### hrlimits are derived from the data, in the GRS1915_DataVisualisation Notebook
     hrlimits = [[-2.5, 1.5], [-3.0, 2.0]]
