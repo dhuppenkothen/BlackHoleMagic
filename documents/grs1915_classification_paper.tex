@@ -178,9 +178,15 @@ that cannot be computed for a given parametrization of the duration of each ligh
 
 
 \subsection{Feature Selection and Supervised Classification}
+<<<<<<< HEAD
 We split the observations in training, validation and test data sets, with $60\%$ of observations in the training set and $20\%$ of all observations in the validation and test sets each. This results in $5066$ samples ($1092$ labelled) in the training data set, 1759 samples ($413$ labelled) in the validation set, and 1759 sampled ($379$ labelled) in the test data set.  
 
 \subsubsection{Free Parameter Cross-validation}
+=======
+We split the observations in training, validation and test data sets, with $60\%$ of observations in the training set and $20\%$ of all observations in the validation and test sets each. 
+
+\subsubsection{Free Parameters and Cross-validation}
+>>>>>>> 69337fbbf627ec18bcf9386e3b6d051034596e28
 label{sec:freeparams}
 
 We estimated free parameters of the model, in particular during the feature extraction stage, using a grid-search cross-validation approach. For a range of reasonable parameters and combinations, we tested performance on a supervised classification task using a Random Forest Classifier and the data with human labels are presented in \citep{belloni2000} and \citep{kleinwolt2002}. An overview of all free parameters in the classification model is given in \Table{ref:parameters}.
