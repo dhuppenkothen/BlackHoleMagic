@@ -14,7 +14,7 @@ import linearfilter
 
 ## set the seed for the random number generator
 ## such that my "random choices" remain reproducible
-np.random.seed(20160601)
+np.random.seed(20160527)
 
 
 from BayesPSD import lightcurve, powerspectrum
@@ -635,7 +635,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
                       save_features=True, froot="grs1915"):
 
     ## Set the seed to I will always pick out the same light curves.
-    np.random.seed(20160601)
+    #np.random.seed(20160602)
 
     ## shuffle list of light curves
     np.random.shuffle(d_all)
