@@ -3,29 +3,41 @@ import matplotlib.pyplot as plt
 import numpy as np
 import glob
 import copy
-import cPickle as pickle
+
 import pandas as pd
 import astroML.stats
 import scipy.stats
 from sklearn.preprocessing import StandardScaler
 
+try:
+    # Python 2
+    import cPickle as pickle
+
+except:
+    # Python 3
+    import pickle
 
 import linearfilter
 
 ## set the seed for the random number generator
 ## such that my "random choices" remain reproducible
-np.random.seed(20160527)
-
 
 from BayesPSD import lightcurve, powerspectrum
 
-def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25):
+#from BayesPSD import lightcurve, powerspectrum
+
+def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25, seed=20160601):
+
+
+    np.random.seed(seed)
+
+    print("state: " + str(np.random.get_state()))
 
     ## total number of light curves
     n_lcs = len(d_all)
 
     ## shuffle list of light curves
-    np.random.shuffle(d_all)
+    #np.random.shuffle(d_all)
 
     #train_frac = 0.5
     #validation_frac = 0.25
@@ -115,7 +127,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
     return segments, labels, np.array(nsegments)
 
 def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_frac = 0.25,
-                  seg=True, seg_length=1024., overlap = 128.):
+                  seg=True, seg_length=1024., overlap = 128., seed=20160601):
 
 
     #f = open(filename)
@@ -128,7 +140,8 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
     st = pd.Series(states)
     st.value_counts()
 
-    d_all_train, d_all_val, d_all_test = split_dataset(d_all)
+    d_all_train, d_all_val, d_all_test = split_dataset(d_all, train_frac=train_frac, validation_frac=validation_frac, 
+                                                       test_frac=test_frac, seed=seed)
 
     if not val:
         d_all_train  = d_all_train + d_all_val
@@ -632,20 +645,22 @@ def make_all_features(d_all, k=10, lamb=0.1,
                       val=True, train_frac=0.6, validation_frac=0.2, test_frac = 0.2,
                       seg=True, seg_length=1024., overlap = 64.,
                       bins=30, navg=4, hr_summary=True, ps_summary=True, lc=True, hr=True,
-                      save_features=True, froot="grs1915"):
+                      save_features=True, froot="grs1915", seed=20160601):
 
     ## Set the seed to I will always pick out the same light curves.
-    #np.random.seed(20160602)
+    np.random.seed(seed)
 
     ## shuffle list of light curves
-    np.random.shuffle(d_all)
+    #np.random.shuffle(d_all)
+    indices = np.arange(len(d_all))
+    np.random.shuffle(indices)
 
     n_lcs = len(d_all)
 
     ## let's pull out light curves for three data sets into different variables.
-    d_all_train = d_all[:int(train_frac*n_lcs)]
-    d_all_test = d_all[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]
-
+    d_all_train = [d_all[i] for i in indices[:int(train_frac*n_lcs)]]
+    d_all_test = [d_all[i] for i in indices[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]]
+ 
     seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length,
                                                            overlap=overlap)
     seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length,
@@ -665,7 +680,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
 
     if val:
-        d_all_val = d_all[int((train_frac + test_frac)*n_lcs):]
+        d_all_val = [d_all[i] for i in indices[int((train_frac + test_frac)*n_lcs):]]
         seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length,
                                                          overlap=overlap)
         tstart_val = np.array([s[0,0] for s in seg_val])
@@ -681,8 +696,6 @@ def make_all_features(d_all, k=10, lamb=0.1,
     features_train = make_features(seg_train,k, bins, lamb, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
     features_test = make_features(seg_test,k, bins, lamb,  hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
 
-    print("len(tstart_train): " + str(len(tstart_train)))
-    print("len(features_train): " + str(len(features_train)))
 
     features_train["tstart"] = tstart_train
     features_test["tstart"] = tstart_test
@@ -692,8 +705,6 @@ def make_all_features(d_all, k=10, lamb=0.1,
     #features_train = np.concatenate((tstart_train, features_train))
     #features_test = np.concatenate((tstart_test, features_test))
 
-    print("len(tstart_test): " + str(len(tstart_test)))
-    print("len(features_test): " + str(len(features_test)))
 
 
     ## check for NaN
@@ -721,11 +732,11 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
         print("Checking for NaN in the validation set ...")
         features_val_checked, labels_val_checked = check_nan(features_val, labels_val, hr=hr, lc=lc)
+        print("%i samples in validation data set after checking for NaNs."%features_val_checked["features"].shape[0])
 
         labelled_features["val"] =  [features_val_checked["features"], labels_val_checked],
 
     if save_features:
-        print("Training features before saving: " + str(features_train_checked["features"].shape))
         np.savetxt(froot+"_%is_features_train.txt"%int(seg_length), features_train_checked["features"])
         np.savetxt(froot+"_%is_features_test.txt"%int(seg_length), features_test_checked["features"])
         np.savetxt(froot+"_%is_nseg_train.txt"%int(seg_length), features_train_checked["nseg"])
@@ -788,21 +799,16 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
 def extract_all(d_all, seg_length_all=[256., 1024.], overlap=128.,
                 val=True, train_frac=0.5, validation_frac = 0.25, test_frac = 0.25,
-                k = 10, lamb=0.1,
+                k = 10, lamb=0.1, seed=20160601,
                 datadir="./"):
 
     if np.size(overlap) != np.size(seg_length_all):
         overlap = [overlap for i in xrange(len(seg_length_all))]
 
-    print(overlap)
-    print("seg_length: " + str(seg_length_all))
-    print("overlap: " + str(overlap))
-
     for ov, sl in zip(overlap, seg_length_all):
-        print("%i segments, summary"%int(sl))
         lf = make_all_features(d_all, k, lamb, val, train_frac, validation_frac, test_frac,
                   seg=True, seg_length=sl, overlap=ov,
                   hr_summary=True, ps_summary=True, lc=True, hr=True,
-                  save_features=True, froot=datadir+"grs1915")
+                  save_features=True, froot=datadir+"grs1915", seed=seed)
 
     return
