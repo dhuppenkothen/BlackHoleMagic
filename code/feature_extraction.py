@@ -8,6 +8,7 @@ import pandas as pd
 import astroML.stats
 import scipy.stats
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 try:
     # Python 2
@@ -263,6 +264,27 @@ def rebin_psd(freq, ps, n=10, type='average'):
 
 
 
+def logbin_periodogram(freq, ps, percent=0.01):
+    df = freq[1]-freq[0]
+    minfreq = freq[0]*0.5
+    maxfreq = freq[-1]
+    binfreq = [minfreq, minfreq+df]
+    while binfreq[-1] <= maxfreq:
+        binfreq.append(binfreq[-1] + df*(1.+percent))
+        df = binfreq[-1]-binfreq[-2]
+    binps, bin_edges, binno = scipy.stats.binned_statistic(freq, ps, statistic="mean", bins=binfreq)
+    #binfreq = np.logspace(np.log10(freq[0]), np.log10(freq[-1]+epsilon), bins, endpoint=True)
+    #binps, bin_edges, binno = scipy.stats.binned_statistic(freq[1:], ps[1:], 
+    #                                                       statistic="mean", bins=binfreq)
+    #std_ps, bin_edges, binno = scipy.stats.binned_statistic(freq[1:], ps[1:], 
+    #                                                       statistic=np.std, bins=binfreq)
+
+    nsamples = np.array([len(binno[np.where(binno == i)[0]]) for i in xrange(np.max(binno))])
+    df = np.diff(binfreq)
+    binfreq = binfreq[:-1]+df/2.
+    #return binfreq, binps, std_ps, nsamples
+    return np.array(binfreq), np.array(binps), nsamples
+
 
 def psd_features(seg, pcb):
     """
@@ -276,17 +298,27 @@ def psd_features(seg, pcb):
     dt = np.min(dt)
 
     counts = seg[:,1]*dt
-    freq, ps = make_psd(seg, navg=1)
-    if times[-1]-times[0] >= 256.0:
-        tlen = (times[-1]-times[0])
-        nrebin = np.round(tlen/256.)
-        freq, ps = rebin_psd(freq, ps, n=nrebin, type='average')
+    #freq, ps = make_psd(seg, navg=1)
+    #if times[-1]-times[0] >= 256.0:
+    #    tlen = (times[-1]-times[0])
+    #    nrebin = np.round(tlen/256.)
+    #    freq, ps = rebin_psd(freq, ps, n=nrebin, type='average')
 
+    ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
+    ps.freq = np.array(ps.freq)
+    ps.ps = np.array(ps.ps)*ps.freq
 
-    freq = np.array(freq[1:])
-    ps = ps[1:]
+    bkg = np.mean(ps.ps[-100:])
 
-    binfreq, binps = total_psd(seg, 24)
+    freq = np.array(ps.freq[1:])
+    ps = ps.ps[1:]
+
+    #binfreq, binps = total_psd(seg, 24)
+    binfreq, binps, nsamples = logbin_periodogram(freq, ps)
+
+    bkg = np.mean(binps[-30:])
+
+    binps -= bkg
 
     fmax_ind = np.where(binfreq*binps == np.max(binfreq*binps))
     maxfreq = binfreq[fmax_ind[0]]
@@ -345,6 +377,9 @@ def make_psd(segment, navg=1):
     return ps.freq, ps_all
 
 epsilon = 1.e-8
+
+
+
 
 def total_psd(seg, bins):
     times = seg[:,0]
@@ -464,9 +499,47 @@ def extract_lc(seg):
     return [times, counts, hr1, hr2]
 
 
+def psd_pca(seg, n_components=12):
+    freq_all, ps_all, maxfreq_all = [], [], []
+    for s in seg:
+        times = s[:,0] 
+        dt = times[1:] - times[:-1]
+        dt = np.min(dt)
+
+        counts = s[:,1]*dt
+    
+        ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
+        ps.freq = np.array(ps.freq)
+        ps.ps = np.array(ps.ps)*ps.freq
+     
+        freq = np.array(ps.freq[1:])
+        ps = ps.ps[1:]
+
+        binfreq, binps, nsamples = logbin_periodogram(freq, ps)
+
+        bkg = np.mean(binps[-50:])
+
+        binps -= bkg
+    
+        fmax_ind = np.where(binfreq*binps == np.max(binfreq*binps))
+        maxfreq = binfreq[fmax_ind[0]]
+        freq_all.append(binfreq)
+        ps_all.append(binps)
+        maxfreq_all.append(maxfreq)
+ 
+    freq_all = np.array(freq_all)
+    ps_all = np.array(ps_all)
+    maxfreq_all = np.hstack(maxfreq_all)
+
+    ps_scaled = StandardScaler().fit_transform(ps_all)
+    pc = PCA(n_components=n_components) 
+    ps_pca = pc.fit(ps_scaled).transform(ps_scaled)
+ 
+    return ps_pca
 
 def make_features(seg, k=10, bins=30, lamb=None,
-                  hr_summary=True, ps_summary=True, lc=True, hr=True, hrlimits=None):
+                  hr_summary=True, ps_summary=True, 
+                  lc=True, hr=True, hrlimits=None, n_components=12):
     """
     Make features from a set of light curve segments, except for the linear filter!
     
@@ -521,7 +594,8 @@ def make_features(seg, k=10, bins=30, lamb=None,
 
     ## transform the counts into a weight vector
     ww = linear_filter(counts, k=k)
-    
+     
+    pca = psd_pca(seg, n_components=n_components)
     for s in seg:
 
         features_temp = []
@@ -538,7 +612,9 @@ def make_features(seg, k=10, bins=30, lamb=None,
             if len(maxfreq) == 0: 
                 features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
             else: 
-                features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+#                features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+                features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+
         else:
             ## whole PSD
             #freq, ps = make_psd(s,navg=navg)
@@ -575,10 +651,8 @@ def make_features(seg, k=10, bins=30, lamb=None,
             #print("appending hardness ratios")
             hr_all.append([lc_temp[2], lc_temp[3]])
 
-    print("ww.shape: " + str(np.array(ww).shape))
-    print("features.shape: " + str(features[0]))
-    print("type(ww): " + str(type(np.array(ww))))
-    features_all = np.hstack((np.array(features), np.array(ww)))
+    #features_all = np.hstack((np.array(features), np.array(ww)))
+    features_all = np.hstack((np.array(features), np.array(pca)))
 
     print("I am about to make a dictionary")
     fdict = {"features": features_all}
