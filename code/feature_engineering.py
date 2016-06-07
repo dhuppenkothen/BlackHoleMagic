@@ -215,7 +215,7 @@ def labelled_data(features, labels, lc, hr, tstart):
 
 def scale_features(features, features_lb=None):
 
-    features_all = np.hstack([features["train"],
+    features_all = np.vstack([features["train"],
                               features["val"],
                               features["test"]])
 
