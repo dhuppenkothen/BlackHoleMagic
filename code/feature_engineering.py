@@ -22,8 +22,200 @@ def transform_chi(labels):
     return labels
 
 
-def greedy_search(datadir, seg_length_supervised=1024.):
+def load_features(datadir, tseg, log_features=None):
 
+    features_train_full = np.loadtxt(datadir+"grs1915_%is_features_train.txt"%tseg)
+    features_test_full = np.loadtxt(datadir+"grs1915_%is_features_test.txt"%tseg)
+    features_val_full = np.loadtxt(datadir+"grs1915_%is_features_val.txt"%tseg)
+
+    labels_test_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_test.txt"%tseg)[0])
+    labels_train_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_train.txt"%tseg)[0])
+    labels_val_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_val.txt"%tseg)[0])
+
+
+    tstart_train_full = np.loadtxt(datadir+"grs1915_%is_tstart_train.txt"%tseg)
+    tstart_test_full = np.loadtxt(datadir+"grs1915_%is_tstart_test.txt"%tseg)
+    tstart_val_full = np.loadtxt(datadir+"grs1915_%is_tstart_val.txt"%tseg)
+
+    features_all_full = np.concatenate((features_train_full, features_val_full,
+                                        features_test_full))
+
+
+    lc_all_full = gt.getpickle(datadir+"grs1915_%is_lc_all.dat"%tseg)
+    hr_all_full = gt.getpickle(datadir+"grs1915_%is_hr_all.dat"%tseg)
+
+    lc_train_full = lc_all_full["train"]
+    lc_test_full = lc_all_full["test"]
+    lc_val_full = lc_all_full["val"]
+
+    hr_train_full = hr_all_full["train"]
+    hr_test_full = hr_all_full["test"]
+    hr_val_full = hr_all_full["val"]
+
+    # NOTE: This line only works unless I change the features or the
+    # order of the features! BEWARE!
+    # It takes care of a single segment that seems to be an outlier in
+    # terms of the hardness ratios
+    # It's strange enough to be fairly certain it's instrumental
+    delete_ind = np.where(features_all_full[:,17] >= 20)[0]
+
+    if delete_ind > len(features_train_full):
+        delete_ind_new = delete_ind - len(features_train_full)
+    else:
+        delete_ind_new = delete_ind
+        delete_set = "train"
+
+    if delete_ind_new > len(features_val_full):
+        delete_ind_new -= len(features_val_full)
+        delete_set = "test"
+    else:
+        delete_set = "val"
+
+    if delete_set == "train":
+        features_train_full = np.delete(features_train_full,
+                                        delete_ind_new, axis=0)
+        labels_train_full = np.delete(labels_train_full,
+                                        delete_ind_new, axis=0)
+        lc_train_full = np.delete(lc_train_full,
+                                        delete_ind_new, axis=0)
+        hr_train_full = np.delete(hr_train_full,
+                                        delete_ind_new, axis=0)
+
+
+    elif delete_set == "val":
+        features_val_full = np.delete(features_val_full,
+                                        delete_ind_new, axis=0)
+        labels_val_full = np.delete(labels_val_full,
+                                        delete_ind_new, axis=0)
+        lc_val_full = np.delete(lc_val_full,
+                                        delete_ind_new, axis=0)
+        hr_val_full = np.delete(hr_val_full,
+                                        delete_ind_new, axis=0)
+
+    elif delete_set == "test":
+        features_test_full = np.delete(features_test_full,
+                                        delete_ind_new, axis=0)
+        labels_test_full = np.delete(labels_test_full,
+                                        delete_ind_new, axis=0)
+        lc_test_full = np.delete(lc_test_full,
+                                        delete_ind_new, axis=0)
+        hr_test_full = np.delete(hr_test_full,
+                                        delete_ind_new, axis=0)
+
+    if log_features is None:
+        log_features = [2, 5, 6, 7, 9, 10, 11, 14, 16]
+
+    for l in log_features:
+        features_train_full[:,l] = np.log(features_train_full[:,l])
+        features_test_full[:,l] = np.log(features_test_full[:,l])
+        features_val_full[:,l] = np.log(features_val_full[:,l])
+
+
+    train_ind = np.where(labels_train_full != "None")[0]
+    lc_train = np.array([lc_train_full[i] for i in train_ind])
+    hr_train = np.array([hr_train_full[i] for i in train_ind])
+
+    val_ind = np.where(labels_val_full != "None")[0]
+    lc_val = np.array([lc_val_full[i] for i in val_ind])
+    hr_val = np.array([hr_val_full[i] for i in val_ind])
+
+    test_ind = np.where(labels_test_full != "None")[0]
+    lc_test = np.array([lc_test_full[i] for i in test_ind])
+    hr_test = np.array([hr_test_full[i] for i in test_ind])
+
+    labels_train_full = transform_chi(labels_train_full)
+    labels_test_full = transform_chi(labels_test_full)
+    labels_val_full = transform_chi(labels_val_full)
+
+
+    features = {"train": features_train_full,
+                "test": features_test_full,
+                "val": features_val_full}
+
+    labels = {"train": labels_train_full,
+              "test": labels_test_full,
+              "val": labels_val_full}
+
+    lc = {"train": lc_train_full,
+          "test": lc_test_full,
+          "val": lc_val_full}
+
+    hr = {"train": hr_train_full,
+          "test": hr_test_full,
+          "val": hr_val_full}
+
+    return features, labels, lc, hr
+
+
+def labelled_data(features, labels, lc, hr):
+
+    labels_train_full = labels["train"]
+    labels_test_full = labels["test"]
+    labels_val_full = labels["val"]
+
+    train_ind =  np.where(labels_train_full != "None")[0]
+    test_ind =  np.where(labels_test_full != "None")[0]
+    val_ind =  np.where(labels_val_full != "None")[0]
+
+    labels_train = labels_train_full[train_ind]
+    labels_test = labels_test_full[test_ind]
+    labels_val = labels_val_full[val_ind]
+
+    features_train = features["train"][train_ind]
+    features_test = features["test"][test_ind]
+    features_val = features["val"][val_ind]
+
+    lc_train = lc["train"][train_ind]
+    lc_test = lc["test"][test_ind]
+    lc_val = lc["val"][val_ind]
+
+    hr_train = hr["train"][train_ind]
+    hr_test = hr["test"][test_ind]
+    hr_val = hr["val"][val_ind]
+
+    features_lb = {"train": features_train,
+                "test": features_test,
+                "val": features_val}
+
+    labels_lb = {"train": labels_train,
+              "test": labels_test,
+              "val": labels_val}
+
+    lc_lb = {"train": lc_train,
+          "test": lc_test,
+          "val": lc_val}
+
+    hr_lb = {"train": hr_train,
+          "test": hr_test,
+          "val": hr_val}
+
+    return features_lb, labels_lb, lc_lb, hr_lb
+
+
+def scale_features(features, features_lb=None):
+
+    features_all = np.hstack([features["train"],
+                              features["val"],
+                              features["test"]])
+
+    scaler = StandardScaler().fit(features_all)
+
+    fscaled = {"train": scaler.transform(features["train"]),
+               "test": scaler.transform(features["test"]),
+               "val": scaler.transform(features["val"])}
+
+    if features_lb is not None:
+        fscaled_lb = {"train": scaler.transform(features_lb["train"]),
+                      "test": scaler.transform(features_lb["test"]),
+                      "val": scaler.transform(features_lb["val"])}
+
+        return fscaled, fscaled_lb
+
+    else:
+        return fscaled
+    
+
+def greedy_search(datadir, seg_length_supervised=1024.):
 
     features_train_full = np.loadtxt(datadir+"grs1915_%is_features_train.txt"%seg_length_supervised)
     features_test_full = np.loadtxt(datadir+"grs1915_%is_features_test.txt"%seg_length_supervised)
