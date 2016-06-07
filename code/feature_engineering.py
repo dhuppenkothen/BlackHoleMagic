@@ -59,6 +59,8 @@ def load_features(datadir, tseg, log_features=None):
     # It's strange enough to be fairly certain it's instrumental
     delete_ind = np.where(features_all_full[:,17] >= 20)[0]
 
+    print("delete_ind: " + str(delete_ind))
+
     if delete_ind > len(features_train_full):
         delete_ind_new = delete_ind - len(features_train_full)
     else:
@@ -71,6 +73,9 @@ def load_features(datadir, tseg, log_features=None):
     else:
         delete_set = "val"
 
+    print("delete_ind_new: " + str(delete_ind_new))
+    print("delete_set: " + str(delete_set))
+
     if delete_set == "train":
         features_train_full = np.delete(features_train_full,
                                         delete_ind_new, axis=0)
@@ -80,7 +85,6 @@ def load_features(datadir, tseg, log_features=None):
                                         delete_ind_new, axis=0)
         hr_train_full = np.delete(hr_train_full,
                                         delete_ind_new, axis=0)
-
 
     elif delete_set == "val":
         features_val_full = np.delete(features_val_full,
@@ -102,6 +106,12 @@ def load_features(datadir, tseg, log_features=None):
         hr_test_full = np.delete(hr_test_full,
                                         delete_ind_new, axis=0)
 
+    features_all_full = np.concatenate((features_train_full, features_val_full,
+                                        features_test_full))
+
+
+    print("after removal: " + str(np.where(features_all_full[:,17] >= 20)[0]))
+
     if log_features is None:
         log_features = [2, 5, 6, 7, 9, 10, 11, 14, 16]
 
@@ -111,22 +121,9 @@ def load_features(datadir, tseg, log_features=None):
         features_val_full[:,l] = np.log(features_val_full[:,l])
 
 
-    train_ind = np.where(labels_train_full != "None")[0]
-    lc_train = np.array([lc_train_full[i] for i in train_ind])
-    hr_train = np.array([hr_train_full[i] for i in train_ind])
-
-    val_ind = np.where(labels_val_full != "None")[0]
-    lc_val = np.array([lc_val_full[i] for i in val_ind])
-    hr_val = np.array([hr_val_full[i] for i in val_ind])
-
-    test_ind = np.where(labels_test_full != "None")[0]
-    lc_test = np.array([lc_test_full[i] for i in test_ind])
-    hr_test = np.array([hr_test_full[i] for i in test_ind])
-
     labels_train_full = transform_chi(labels_train_full)
     labels_test_full = transform_chi(labels_test_full)
     labels_val_full = transform_chi(labels_val_full)
-
 
     features = {"train": features_train_full,
                 "test": features_test_full,
@@ -213,40 +210,23 @@ def scale_features(features, features_lb=None):
 
     else:
         return fscaled
-    
+
 
 def greedy_search(datadir, seg_length_supervised=1024.):
 
-    features_train_full = np.loadtxt(datadir+"grs1915_%is_features_train.txt"%seg_length_supervised)
-    features_test_full = np.loadtxt(datadir+"grs1915_%is_features_test.txt"%seg_length_supervised)
-    features_val_full = np.loadtxt(datadir+"grs1915_%is_features_val.txt"%seg_length_supervised)
 
-    labels_test_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_test.txt"%seg_length_supervised)[0])
-    labels_train_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_train.txt"%seg_length_supervised)[0])
-    labels_val_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_val.txt"%seg_length_supervised)[0])
+    features, labels, lc, hr = load_features(datadir, seg_length_supervised)
 
-    labels_train_full = transform_chi(labels_train_full)
-    labels_test_full = transform_chi(labels_test_full)
-    labels_val_full = transform_chi(labels_val_full)
+    features_lb, labels_lb, lc_lb, hr_lb = labelled_data(features, labels,
+                                                         lc, hr)
 
-    tstart_train_full = np.loadtxt(datadir+"grs1915_%is_tstart_train.txt"%seg_length_supervised)
-    tstart_test_full = np.loadtxt(datadir+"grs1915_%is_tstart_test.txt"%seg_length_supervised)
-    tstart_val_full = np.loadtxt(datadir+"grs1915_%is_tstart_val.txt"%seg_length_supervised)
+    features_train = features_lb["train"]
+    features_val = features_lb["val"]
+    features_test = features_lb["test"]
+    labels_train = labels_lb["train"]
+    labels_val =  labels_lb["val"]
+    labels_test = labels_lb["test"]
 
-    features_all_full = np.concatenate((features_train_full, features_val_full, features_test_full))
-
-    features_train = features_train_full[np.where(labels_train_full != "None")]
-    features_test = features_test_full[np.where(labels_test_full != "None")]
-    features_val= features_val_full[np.where(labels_val_full != "None")]
-
-    labels_train= labels_train_full[np.where(labels_train_full != "None")]
-    labels_test = labels_test_full[np.where(labels_test_full != "None")]
-    labels_val = labels_val_full[np.where(labels_val_full != "None")]
-
-    labels_train = transform_chi(labels_train)
-    labels_test = transform_chi(labels_test)
-    labels_val = transform_chi(labels_val)
- 
     score_all = [] 
     feature_ranking = []
     nfeatures = range(features_train.shape[1])
@@ -274,15 +254,16 @@ def greedy_search(datadir, seg_length_supervised=1024.):
                 fte = np.concatenate((features_new_test, fte), 1)
             ### scale features
             f_all = np.concatenate((ft, fv, fte))
-            #print("NaN in row: " + str(np.where(np.isnan(f_all))))
+
             scaler_train = StandardScaler().fit(f_all)
             fscaled_train = scaler_train.transform(ft)
         
             fscaled_val = scaler_train.transform(fv)
             ### Random Forest Classifier
             params = {'max_depth': [10,50,100,200,400]}#,
-            grid_rfc = GridSearchCV(RandomForestClassifier(n_estimators=250), param_grid=params,
-                                verbose=0, n_jobs=15)
+            grid_rfc = GridSearchCV(RandomForestClassifier(n_estimators=250),
+                                    param_grid=params, verbose=0, n_jobs=15)
+
             grid_rfc.fit(fscaled_train, labels_train)
             best_params.append(grid_rfc.best_params_)
             score.append(grid_rfc.score(fscaled_val, labels_val))
@@ -302,9 +283,16 @@ def greedy_search(datadir, seg_length_supervised=1024.):
             features_new_val = np.atleast_2d(features_val[:,n_best]).T
             features_new_test = np.atleast_2d(features_test[:,n_best]).T
         else:
-            features_new_train = np.concatenate((features_new_train, np.atleast_2d(features_train[:,n_best]).T), 1)
-            features_new_val = np.concatenate((features_new_val, np.atleast_2d(features_val[:,n_best]).T), 1)
-            features_new_test = np.concatenate((features_new_test, np.atleast_2d(features_test[:,n_best]).T), 1)
+            features_new_train = np.concatenate((features_new_train,
+                                                 np.atleast_2d(features_train[:,n_best]).T), 1)
+            features_new_val = np.concatenate((features_new_val,
+                                               np.atleast_2d(features_val[:,n_best]).T), 1)
+            features_new_test = np.concatenate((features_new_test,
+                                                np.atleast_2d(features_test[:,n_best]).T), 1)
+
+    features_new_train = np.array([features["train"][:,i] for i in feature_ranking]).T
+    features_new_test = np.array([features["test"][:,i] for i in feature_ranking]).T
+    features_new_val = np.array([features["val"][:,i] for i in feature_ranking]).T
 
 
     res = {"ranking":feature_ranking, "fnew_train":features_new_train,
@@ -321,7 +309,7 @@ def main():
     datadir= "/scratch/daniela/data/grs1915/"
     seg_length_supervised = 1024.
 
-    greedy_search(datadir, seg_length_supervised=1024.)
+    greedy_search(datadir, seg_length_supervised=seg_length_supervised)
 
     return
 
