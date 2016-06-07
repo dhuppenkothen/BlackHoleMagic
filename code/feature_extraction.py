@@ -539,7 +539,7 @@ def psd_pca(seg, n_components=12):
 
 def make_features(seg, k=10, bins=30, lamb=None,
                   hr_summary=True, ps_summary=True, 
-                  lc=True, hr=True, hrlimits=None, n_components=12):
+                  lc=True, hr=True, hrlimits=None, n_components=3):
     """
     Make features from a set of light curve segments, except for the linear filter!
     
@@ -612,8 +612,8 @@ def make_features(seg, k=10, bins=30, lamb=None,
             if len(maxfreq) == 0: 
                 features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
             else: 
-#                features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
-                features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+                features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+#                features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
 
         else:
             ## whole PSD
@@ -651,8 +651,8 @@ def make_features(seg, k=10, bins=30, lamb=None,
             #print("appending hardness ratios")
             hr_all.append([lc_temp[2], lc_temp[3]])
 
-    #features_all = np.hstack((np.array(features), np.array(ww)))
-    features_all = np.hstack((np.array(features), np.array(pca)))
+    features_all = np.hstack((np.array(features), np.array(ww)))
+    features_all = np.hstack((np.array(features_all), np.array(pca)))
 
     print("I am about to make a dictionary")
     fdict = {"features": features_all}
