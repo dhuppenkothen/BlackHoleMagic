@@ -44,7 +44,7 @@ def features_pca(datadir, tseg, log_features=None, ranking=None, ax=None,
 
     # make a Figure object
     if ax is None:
-        fig, ax = plt.subplots(1,1,figsize=(15,9))
+        fig, ax = plt.subplots(1,1,figsize=(12,9))
 
     # first plot the unclassified examples:
     ax.scatter(fscaled_pca[labels_all == "None",0],
@@ -61,12 +61,11 @@ def features_pca(datadir, tseg, log_features=None, ranking=None, ax=None,
 
     ax.set_xlabel("PCA Component 1")
     ax.set_ylabel("PCA Component 2")
-    ax.set_xlim(-6.2, 7.0)
+    ax.set_xlim(-6.2, 8.0)
     ax.set_ylim(-7.0, 8.0)
-    plt.legend("upper right")
+    ax.legend(loc="upper right", prop={"size":14})
 
     plt.tight_layout()
-    plt.savefig(datadir+"grs1915_features_pca.pdf", format="pdf")
-    plt.close()
+    #plt.savefig(datadir+"grs1915_features_pca.pdf", format="pdf")
 
     return ax
