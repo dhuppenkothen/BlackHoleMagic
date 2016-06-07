@@ -7,7 +7,7 @@ import feature_engineering
 from sklearn.decomposition import PCA
 
 
-def features_pca(datadir, tseg, log_features=None, ranking=None, ax=None,
+def features_pca(datadir, tseg, log_features=None, ranking=None, axes=None,
                  alpha=0.8, palette="Set3"):
 
     features, labels, lc, \
@@ -43,11 +43,13 @@ def features_pca(datadir, tseg, log_features=None, ranking=None, ax=None,
                               np.where(unique_labels == "None")[0])
 
     # make a Figure object
-    if ax is None:
-        fig, ax = plt.subplots(1,1,figsize=(12,9))
+    if axes is None:
+        fig, axes = plt.subplots(1,2,figsize=(16,9))
+
+    ax1, ax2 = axes[0], axes[1]
 
     # first plot the unclassified examples:
-    ax.scatter(fscaled_pca[labels_all == "None",0],
+    ax1.scatter(fscaled_pca[labels_all == "None",0],
                fscaled_pca[labels_all == "None",1],
                color="grey", alpha=alpha)
 
@@ -55,17 +57,48 @@ def features_pca(datadir, tseg, log_features=None, ranking=None, ax=None,
     current_palette = sns.color_palette(palette, len(unique_labels))
 
     for l, c in zip(unique_labels, current_palette):
-        ax.scatter(fscaled_pca[labels_all == l,0],
+        ax1.scatter(fscaled_pca[labels_all == l,0],
                    fscaled_pca[labels_all == l,1], s=40,
                    color=c, alpha=alpha, label=l)
 
-    ax.set_xlabel("PCA Component 1")
-    ax.set_ylabel("PCA Component 2")
-    ax.set_xlim(-6.2, 8.0)
-    ax.set_ylim(-7.0, 8.0)
-    ax.legend(loc="upper right", prop={"size":14})
+    ax1.set_xlabel("PCA Component 1")
+    ax1.set_ylabel("PCA Component 2")
+    ax1.set_xlim(-6.2, 8.0)
+    ax1.set_ylim(-7.0, 8.0)
+    ax1.legend(loc="upper right", prop={"size":14})
+
+    # make a Figure object
+    #fig, ax = plt.subplots(1,1,figsize=(15,9))
+
+    labels_phys = feature_engineering.convert_labels_to_physical(labels)
+
+    labels_all_phys = np.hstack([labels_phys["train"], labels_phys["val"],
+                                 labels_phys["test"]])
+
+    labels_unique_phys = np.unique(labels_all_phys)
+    none_ind = np.where(labels_unique_phys == "None")[0]
+    labels_unique_phys = np.delete(labels_unique_phys, none_ind)
+    print("physical labels: " + str(labels_unique_phys))
+
+    # first plot the unclassified examples:
+    ax2.scatter(fscaled_pca[labels_all_phys == "None",0],
+                fscaled_pca[labels_all_phys == "None",1],
+                color="grey", alpha=alpha)
+
+    # now make a color palette:
+    current_palette = sns.color_palette(palette, len(labels_unique_phys))
+
+    for l, c in zip(labels_unique_phys, current_palette):
+        ax2.scatter(fscaled_pca[labels_all_phys == l,0],
+                    fscaled_pca[labels_all_phys == l,1], s=40,
+                    color=c, alpha=alpha, label=l)
+
+    ax2.set_xlabel("PCA Component 1")
+    #ax2.set_ylabel("PCA Component 2")
+    ax2.set_xlim(-6.2, 8.0)
+    ax2.set_ylim(-7.0, 8.0)
+    ax2.legend(loc="upper right", prop={"size":14})
 
     plt.tight_layout()
-    #plt.savefig(datadir+"grs1915_features_pca.pdf", format="pdf")
 
-    return ax
+    return ax1, ax2
