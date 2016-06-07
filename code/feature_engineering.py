@@ -162,13 +162,13 @@ def labelled_data(features, labels, lc, hr):
     features_test = features["test"][test_ind]
     features_val = features["val"][val_ind]
 
-    lc_train = np.array([lc["train"] for i in train_ind])
-    lc_test = np.array([lc["test"] for i in test_ind])
-    lc_val = np.array([lc["val"] for i in val_ind])
+    lc_train = np.array([lc["train"][i] for i in train_ind])
+    lc_test = np.array([lc["test"][i] for i in test_ind])
+    lc_val = np.array([lc["val"][i] for i in val_ind])
 
-    hr_train = np.array([hr["train"] for i in train_ind])
-    hr_test = np.array([hr["test"] for i in test_ind])
-    hr_val = np.array([hr["val"] for i in val_ind])
+    hr_train = np.array([hr["train"][i] for i in train_ind])
+    hr_test = np.array([hr["test"][i] for i in test_ind])
+    hr_val = np.array([hr["val"][i] for i in val_ind])
 
     features_lb = {"train": features_train,
                 "test": features_test,
