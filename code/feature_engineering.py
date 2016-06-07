@@ -22,7 +22,7 @@ def transform_chi(labels):
     return labels
 
 
-def load_features(datadir, tseg, log_features=None):
+def load_features(datadir, tseg, log_features=None, ranking=None):
 
     features_train_full = np.loadtxt(datadir+"grs1915_%is_features_train.txt"%tseg)
     features_test_full = np.loadtxt(datadir+"grs1915_%is_features_test.txt"%tseg)
@@ -31,7 +31,6 @@ def load_features(datadir, tseg, log_features=None):
     labels_test_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_test.txt"%tseg)[0])
     labels_train_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_train.txt"%tseg)[0])
     labels_val_full = np.array(gt.conversion(datadir+"grs1915_%is_labels_val.txt"%tseg)[0])
-
 
     tstart_train_full = np.loadtxt(datadir+"grs1915_%is_tstart_train.txt"%tseg)
     tstart_test_full = np.loadtxt(datadir+"grs1915_%is_tstart_test.txt"%tseg)
@@ -85,6 +84,8 @@ def load_features(datadir, tseg, log_features=None):
                                         delete_ind_new, axis=0)
         hr_train_full = np.delete(hr_train_full,
                                         delete_ind_new, axis=0)
+        tstart_train_full = np.delete(tstart_train_full,
+                                        delete_ind_new, axis=0)
 
     elif delete_set == "val":
         features_val_full = np.delete(features_val_full,
@@ -94,6 +95,8 @@ def load_features(datadir, tseg, log_features=None):
         lc_val_full = np.delete(lc_val_full,
                                         delete_ind_new, axis=0)
         hr_val_full = np.delete(hr_val_full,
+                                        delete_ind_new, axis=0)
+        tstart_val_full = np.delete(tstart_val_full,
                                         delete_ind_new, axis=0)
 
     elif delete_set == "test":
@@ -105,10 +108,11 @@ def load_features(datadir, tseg, log_features=None):
                                         delete_ind_new, axis=0)
         hr_test_full = np.delete(hr_test_full,
                                         delete_ind_new, axis=0)
+        tstart_val_full = np.delete(tstart_val_full,
+                                        delete_ind_new, axis=0)
 
     features_all_full = np.concatenate((features_train_full, features_val_full,
                                         features_test_full))
-
 
     print("after removal: " + str(np.where(features_all_full[:,17] >= 20)[0]))
 
@@ -120,14 +124,22 @@ def load_features(datadir, tseg, log_features=None):
         features_test_full[:,l] = np.log(features_test_full[:,l])
         features_val_full[:,l] = np.log(features_val_full[:,l])
 
-
     labels_train_full = transform_chi(labels_train_full)
     labels_test_full = transform_chi(labels_test_full)
     labels_val_full = transform_chi(labels_val_full)
 
-    features = {"train": features_train_full,
-                "test": features_test_full,
-                "val": features_val_full}
+    if ranking is None:
+        features = {"train": features_train_full,
+                    "test": features_test_full,
+                    "val": features_val_full}
+    else:
+        features_train_new = np.array([features_train_full[:,i] for i in ranking]).T
+        features_test_new = np.array([features_test_full[:,i] for i in ranking]).T
+        features_val_new = np.array([features_val_full[:,i] for i in ranking]).T
+
+        features = {"train": features_train_new,
+                    "test": features_test_new,
+                    "val": features_val_new}
 
     labels = {"train": labels_train_full,
               "test": labels_test_full,
@@ -141,10 +153,14 @@ def load_features(datadir, tseg, log_features=None):
           "test": hr_test_full,
           "val": hr_val_full}
 
-    return features, labels, lc, hr
+    tstart = {"train": tstart_train_full,
+              "val": tstart_val_full,
+              "test": tstart_test_full}
+
+    return features, labels, lc, hr, tstart
 
 
-def labelled_data(features, labels, lc, hr):
+def labelled_data(features, labels, lc, hr, tstart):
 
     labels_train_full = labels["train"]
     labels_test_full = labels["test"]
@@ -161,6 +177,10 @@ def labelled_data(features, labels, lc, hr):
     features_train = features["train"][train_ind]
     features_test = features["test"][test_ind]
     features_val = features["val"][val_ind]
+
+    tstart_train = tstart["train"][train_ind]
+    tstart_test = tstart["test"][test_ind]
+    tstart_val = tstart["val"][val_ind]
 
     lc_train = np.array([lc["train"][i] for i in train_ind])
     lc_test = np.array([lc["test"][i] for i in test_ind])
@@ -186,7 +206,11 @@ def labelled_data(features, labels, lc, hr):
           "test": hr_test,
           "val": hr_val}
 
-    return features_lb, labels_lb, lc_lb, hr_lb
+    tstart_lb = {"train": tstart_train,
+          "test": tstart_test,
+          "val": tstart_val}
+
+    return features_lb, labels_lb, lc_lb, hr_lb, tstart_lb
 
 
 def scale_features(features, features_lb=None):
@@ -214,11 +238,12 @@ def scale_features(features, features_lb=None):
 
 def greedy_search(datadir, seg_length_supervised=1024.):
 
+    features, labels, lc, hr, tstart = load_features(datadir,
+                                                     seg_length_supervised)
 
-    features, labels, lc, hr = load_features(datadir, seg_length_supervised)
-
-    features_lb, labels_lb, lc_lb, hr_lb = labelled_data(features, labels,
-                                                         lc, hr)
+    features_lb, labels_lb, lc_lb, hr_lb, tstart_lb = labelled_data(features,
+                                                                    labels,
+                                                                    lc, hr)
 
     features_train = features_lb["train"]
     features_val = features_lb["val"]
@@ -293,7 +318,6 @@ def greedy_search(datadir, seg_length_supervised=1024.):
     features_new_train = np.array([features["train"][:,i] for i in feature_ranking]).T
     features_new_test = np.array([features["test"][:,i] for i in feature_ranking]).T
     features_new_val = np.array([features["val"][:,i] for i in feature_ranking]).T
-
 
     res = {"ranking":feature_ranking, "fnew_train":features_new_train,
            "fnew_val":features_new_val, "fnew_test":features_new_test,
