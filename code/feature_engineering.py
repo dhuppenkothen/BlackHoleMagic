@@ -236,6 +236,44 @@ def scale_features(features, features_lb=None):
         return fscaled
 
 
+def choose_label(label):
+    chaotic = ["beta", "lambda", "kappa", "mu"]
+    deterministic = ["theta", "rho", "alpha", "nu", "delta"]
+    stochastic = ["phi", "gamma", "chi"]
+
+    if label in chaotic:
+        return "chaotic"
+    elif label in deterministic:
+        return "deterministic"
+    elif label in stochastic:
+        return "stochastic"
+    else:
+        return label
+
+def convert_labels_to_physical(labels):
+    labels_train = labels["train"]
+    labels_val = labels["val"]
+    labels_test = labels["test"]
+
+    labels_train_phys, labels_val_phys, labels_test_phys = [], [], []
+    for l in labels_train:
+        labels_train_phys.append(choose_label(l))
+
+    for l in labels_test:
+            labels_test_phys.append(choose_label(l))
+
+    for l in labels_val:
+            labels_val_phys.append(choose_label(l))
+
+    labels_phys = {"train":labels_train_phys,
+              "test": labels_test_phys,
+              "val": labels_val_phys}
+
+    return labels_phys
+
+
+
+
 def greedy_search(datadir, seg_length_supervised=1024.):
 
     features, labels, lc, hr, tstart = load_features(datadir,
