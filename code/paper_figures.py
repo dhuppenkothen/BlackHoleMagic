@@ -97,7 +97,9 @@ def features_pca(fscaled, labels, axes=None,
 
     ax1, ax2 = axes[0], axes[1]
 
-    ax1 = plotting.scatter(fscaled_trans, labels, ax=ax1)
+    labels_all = np.hstack([labels["train"], labels["val"], labels["test"]])
+    
+    ax1 = plotting.scatter(fscaled_trans, labels_all, ax=ax1)
 
     # second panel: physical labels:
     labels_phys = feature_engineering.convert_labels_to_physical(labels)
