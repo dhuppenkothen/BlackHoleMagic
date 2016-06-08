@@ -49,7 +49,7 @@ def transition_matrix(labels, ax=None):
     ax.set_xlabel('Final state')
     ax.set_xticks(range(len(unique_labels)))
     ax.set_xticklabels(unique_labels, rotation=70)
-    ax.yticks(range(len(unique_labels)))
+    ax.set_yticks(range(len(unique_labels)))
     ax.set_yticklabels(unique_labels)
 
     return ax
