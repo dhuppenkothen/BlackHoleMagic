@@ -30,12 +30,19 @@ def _compute_trans_matrix(labels):
 
 
 
-def transition_matrix(labels, ax=None):
+def transition_matrix(labels, ax=None, log=False):
 
     if ax is None:
         fig, ax = plt.subplots(1,1, figsize=(9,9))
 
     unique_labels, transmat, transmat_p = _compute_trans_matrix(labels)
+
+    if log:
+        if np.any(transmat_p == 0):
+            transmat_p = transmat_p + \
+                         np.min(transmat_p[np.nonzero(transmat_p)])/10.0
+
+        transmat_p = np.log(transmat_p)
 
     sns.set_style("whitegrid")
     plt.rc("font", size=24, family="serif", serif="Computer Sans")
@@ -44,7 +51,7 @@ def transition_matrix(labels, ax=None):
     plt.rc('xtick', labelsize=20)
     plt.rc('ytick', labelsize=20)
 
-    ax.pcolormesh(np.log10(transmat), cmap=cmap.viridis)
+    ax.pcolormesh(transmat_p, cmap=cmap.viridis)
     ax.set_ylabel('Initial state')
     ax.set_xlabel('Final state')
     ax.set_xticks(range(len(unique_labels)))
