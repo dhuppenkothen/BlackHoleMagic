@@ -166,6 +166,28 @@ def states_distribution(labels_trained_full, ax=None):
 
     return ax
 
+def plot_eta_omega(labels_all, labels_predict_phys, ax=None):
+
+    labels_eta_omega = labels_all[(labels_all == "eta") |
+                                  (labels_all == "omega")]
+
+    labels_eta_omega_phys = labels_predict_phys[(labels_all == "eta") |
+                                           (labels_all == "omega")]
+
+    if ax is None:
+        fig, ax = plt.subplots(1,1,figsize=(9,7))
+
+    st = pd.Series(labels_eta_omega_phys)
+    nstates = st.value_counts()
+    nstates.plot(kind='bar', color=sns.color_palette()[0], ax=ax)
+    ax.set_ylim(0, 1.05*np.max(nstates))
+
+    ax.set_title("Distribution of eta and omega states")
+    ax.set_xlabel("States")
+    ax.set_ylabel("Number of samples")
+
+    return ax
+
 def supervised_validation(fscaled, fscaled_lb, labels, labels_lb, lc_lb,
                           hr_lb, datadir="./", namestr="grs1915_supervised",
                           misclassified=False):
@@ -283,10 +305,7 @@ def plot_asm_with_classes(labels_predict, tstart, fig=None, ax=None,
     ax.set_xlabel("Time in MJD", fontsize=18)
     ax.set_ylabel("Count rate [counts/s]", fontsize=18)
 
-    return ax
-
-def plot_eta_omega():
-
+    return fig, ax
 
 def supervised_all(fscaled_full, labels_all, tstart,
                    datadir="./", namestr="grs1915_supervised"):
