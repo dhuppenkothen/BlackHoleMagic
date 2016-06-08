@@ -71,7 +71,37 @@ def confusion_matrix(labels_true, labels_pred, log=False,
 
 
 def scatter(features, labels, ax=None, palette="Set3", alpha=0.8):
+    """
+    Make a scatter plot of dimensions 0 and 1 in features, with scatter
+    points coloured by labels.
 
+    Parameters
+    ----------
+    features : matrix (N, M)
+        A (N, M) matrix of `features` with N samples and M features for each
+        sample.
+
+    labels : iterable
+        A list or array of N labels corresponding to the N feature vectors
+        in `features`.
+
+    ax : matplotlib.Axes object
+        The Axes object to plot into
+
+    palette : str
+        The string of the color palette to use for the different classes
+        By default, "Set3" is used.
+
+    alpha : {0,1} float
+        Float between 0 and 1 controlling the transparency of the scatter
+        points.
+
+    Returns
+    -------
+    ax : matplotlib.Axes
+        The Axes object with the plot.
+
+    """
     sns.set_style("whitegrid")
     plt.rc("font", size=24, family="serif", serif="Computer Sans")
     plt.rc("axes", titlesize=20, labelsize=20)
