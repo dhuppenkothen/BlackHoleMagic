@@ -6,6 +6,8 @@ import seaborn as sns
 
 import numpy as np
 import feature_engineering
+
+import sklearn.metrics
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
@@ -142,13 +144,13 @@ def confusion_matrix(labels_true, labels_pred, log=False,
         fig, ax = plt.subplots(1,1,figsize=(9,6))
 
     unique_labels = np.unique(labels_true)
-    cm = confusion_matrix(labels_true, labels_pred, labels=unique_labels)
+    confmatrix = sklearn.metrics.confusion_matrix(labels_true, labels_pred, labels=unique_labels)
 
     if log:
-        if np.any(cm == 0.0):
-            cm += np.min(cm)/10.0
-
-        cm = np.log(cm)
+        if np.any(confmatrix == 0):
+            confmatrix = confmatrix + np.min(confmatrix[np.nonzero(confmatrix)])/10.0
+ 
+        confmatrix = np.log(confmatrix)
 
     sns.set_style("whitegrid")
     plt.rc("font", size=24, family="serif", serif="Computer Sans")
@@ -157,11 +159,14 @@ def confusion_matrix(labels_true, labels_pred, log=False,
     plt.rc('xtick', labelsize=20)
     plt.rc('ytick', labelsize=20)
 
-    ax.matshow(np.log(cm), cmap=cm)
+    ax.pcolormesh(confmatrix, cmap=cm)
     ax.set_ylabel('True label')
     ax.set_xlabel('Predicted label')
-    ax.set_xticks(range(len(unique_labels)), unique_labels, rotation=70)
-    ax.set_yticks(range(len(unique_labels)), unique_labels)
+    ax.set_xticks(range(len(unique_labels)))
+    ax.set_xticklabels(unique_labels, rotation=70)
+
+    ax.set_yticks(range(len(unique_labels)))
+    ax.set_yticklabels(unique_labels)
 
     return ax
 
