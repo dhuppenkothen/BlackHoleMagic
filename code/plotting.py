@@ -6,6 +6,54 @@ import numpy as np
 
 import sklearn.metrics
 
+from collections import Counter
+
+
+def _compute_trans_matrix(labels):
+    unique_labels = np.unique(labels)
+    nlabels = len(unique_labels)
+
+    labels_numerical = np.array([np.where(unique_labels == l)[0][0] \
+                                 for l in labels])
+    labels_numerical = labels_numerical.flatten()
+
+    transmat = np.zeros((nlabels,nlabels))
+    for (x,y), c in Counter(zip(labels_numerical,
+                                labels_numerical[1:])).iteritems():
+        transmat[x,y] = c
+
+    transmat_p = np.zeros_like(transmat)
+    for i,t in enumerate(transmat):
+        transmat_p[i,:] = t/np.max(t)
+
+    return unique_labels, transmat, transmat_p
+
+
+
+def transition_matrix(labels, ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(1,1, figsize=(9,9))
+
+    unique_labels, transmat, transmat_p = _compute_trans_matrix(labels)
+
+    sns.set_style("whitegrid")
+    plt.rc("font", size=24, family="serif", serif="Computer Sans")
+    plt.rc("axes", titlesize=20, labelsize=20)
+    plt.rc("text", usetex=True)
+    plt.rc('xtick', labelsize=20)
+    plt.rc('ytick', labelsize=20)
+
+    ax.pcolormesh(np.log10(transmat), cmap=cmap.viridis)
+    ax.set_ylabel('Initial state')
+    ax.set_xlabel('Final state')
+    ax.set_xticks(range(len(unique_labels)))
+    ax.set_xticklabels(unique_labels, rotation=70)
+    ax.yticks(range(len(unique_labels)))
+    ax.set_yticklabels(unique_labels)
+
+    return ax
+
 
 def confusion_matrix(labels_true, labels_pred, log=False,
                      ax=None, cm=cmap.viridis):
@@ -183,7 +231,7 @@ def plot_misclassifieds(features, trained_labels, real_labels, lc_all, hr_all,
     datadir : str
         The path of the directory to save the figures in
 
-    
+
     """
     misclassifieds = []
     for i,(f, lpredict, ltrue, lc, hr) in enumerate(zip(features,
@@ -224,24 +272,31 @@ def plot_misclassifieds(features, trained_labels, real_labels, lc_all, hr_all,
         current_palette = sns.color_palette()
         fig = plt.figure(figsize=(10,15))
 
-        def plot_lcs(times, counts, hr1, hr2, xcoords, ycoords, colspan, rowspan):
+        def plot_lcs(times, counts, hr1, hr2, xcoords, ycoords,
+                     colspan, rowspan):
             #print("plotting in grid point " + str((xcoords[0], ycoords[0])))
-            ax = plt.subplot2grid((9,6),(xcoords[0], ycoords[0]), colspan=colspan, rowspan=rowspan)
+            ax = plt.subplot2grid((9,6),(xcoords[0], ycoords[0]),
+                                  colspan=colspan, rowspan=rowspan)
             ax.plot(times, counts, lw=2, linestyle="steps-mid", rasterized=True)
             ax.set_xlim([times[0], times[-1]])
             ax.set_ylim([0.0, 12000.0])
             #print("plotting in grid point " + str((xcoords[1], ycoords[1])))
 
-            ax = plt.subplot2grid((9,6),(xcoords[1], ycoords[1]), colspan=colspan, rowspan=rowspan)
-            ax.scatter(hr1, hr2, facecolor=current_palette[1], edgecolor="none", rasterized=True)
+            ax = plt.subplot2grid((9,6),(xcoords[1], ycoords[1]),
+                                  colspan=colspan, rowspan=rowspan)
+            ax.scatter(hr1, hr2, facecolor=current_palette[1],
+                       edgecolor="none", rasterized=True)
             ax.set_xlim([.27, 0.85])
             ax.set_ylim([0.04, 0.7])
 
             #print("plotting in grid point " + str((xcoords[2], ycoords[2])))
-            ax = plt.subplot2grid((9,6),(xcoords[2], ycoords[2]), colspan=colspan, rowspan=rowspan)
+            ax = plt.subplot2grid((9,6),(xcoords[2], ycoords[2]),
+                                  colspan=colspan, rowspan=rowspan)
             dt = np.min(np.diff(times))
-            ps = powerspectrum.PowerSpectrum(times, counts=counts/dt, norm="rms")
-            ax.loglog(ps.freq[1:], ps.ps[1:], linestyle="steps-mid", rasterized=True)
+            ps = powerspectrum.PowerSpectrum(times, counts=counts/dt,
+                                             norm="rms")
+            ax.loglog(ps.freq[1:], ps.ps[1:], linestyle="steps-mid",
+                      rasterized=True)
             ax.set_xlim([ps.freq[1], ps.freq[-1]])
             ax.set_ylim([1.e-6, 10.])
 
@@ -254,11 +309,11 @@ def plot_misclassifieds(features, trained_labels, real_labels, lc_all, hr_all,
         for i in range(4):
             r = robot_all[i]
             h = human_all[i]
-            #print(h[0])
-            #print("human indices: " + str([ [i+3, i+3, i+3], [pos_human, pos_human+1, pos_human+2]]))
-            #print("robot indices: " + str([[i+3, i+3, i+3], [pos_robot, pos_robot+1, pos_robot+2]]))
-            plot_lcs(h[2][0], h[2][1], h[3][0], h[3][1], [i+2, i+2, i+2], [pos_human, pos_human+1, pos_human+2], 1, 1)
-            plot_lcs(r[2][0], r[2][1], r[3][0], r[3][1], [i+2, i+2, i+2], [pos_robot, pos_robot+1, pos_robot+2], 1, 1)
+
+            plot_lcs(h[2][0], h[2][1], h[3][0], h[3][1], [i+2, i+2, i+2],
+                     [pos_human, pos_human+1, pos_human+2], 1, 1)
+            plot_lcs(r[2][0], r[2][1], r[3][0], r[3][1], [i+2, i+2, i+2],
+                     [pos_robot, pos_robot+1, pos_robot+2], 1, 1)
 
         ax = plt.subplot2grid((9,6),(8,pos_human+1))
         ax.set_xlim([0,1])
