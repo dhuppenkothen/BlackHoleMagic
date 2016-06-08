@@ -127,7 +127,7 @@ def scatter(features, labels, ax=None, palette="Set3", alpha=0.8):
         # first plot the unclassified examples:
         ax.scatter(features[labels == "None",0],
                    features[labels == "None",1],
-                   color="grey", alpha=alpha)
+                   color="grey", alpha=alpha, label="unclassified")
 
     # now make a color palette:
     current_palette = sns.color_palette(palette, len(unique_labels))
@@ -144,3 +144,131 @@ def scatter(features, labels, ax=None, palette="Set3", alpha=0.8):
     ax.legend(loc="upper right", prop={"size":14})
 
     return ax
+
+
+import powerspectrum
+
+def plot_misclassifieds(features, trained_labels, real_labels, lc_all, hr_all,
+                        nexamples=6, namestr="misclassified", datadir="./"):
+
+    """
+    Find all mis-classified light curves and plot them with examples of the
+    real and false classes.
+
+    Parameters
+    ----------
+    features : numpy.ndarray
+        The (N,M) array with N samples (rows) and M features (columns) per
+        sample
+
+    trained_labels : iterable
+        The list or array with the trained labels
+
+    real_labels : iterable
+        The list or array with the true labels
+
+    lc_all : list
+        A list of N light curves corresponding to each sample
+
+    hr_all : list
+        A list of N hardness ratio measurements corresponding to each sample
+
+    nexamples : int
+        The number of examples to plot; default is 6
+
+    namestr : str
+        The string to append to each plot for saving to disc,
+        default: "misclassified"
+
+    datadir : str
+        The path of the directory to save the figures in
+
+    
+    """
+    misclassifieds = []
+    for i,(f, lpredict, ltrue, lc, hr) in enumerate(zip(features,
+                                                        trained_labels,
+                                                        real_labels, lc_all,
+                                                        hr_all)):
+        if lpredict == ltrue:
+            continue
+        else:
+            misclassifieds.append([f, lpredict, ltrue, lc, hr])
+
+    for j,m in enumerate(misclassifieds):
+        pos_human = np.random.choice([0,3], p=[0.5, 0.5])
+        pos_robot = int(3. - pos_human)
+
+        f = m[0]
+        lpredict = m[1]
+        ltrue = m[2]
+        times = m[3][0]
+        counts = m[3][1]
+        hr1 = m[4][0]
+        hr2 = m[4][1]
+        print("Predicted class is: " + str(lpredict))
+        print("Human classified class is: " + str(ltrue))
+        robot_all = [[lp, lt, lc, hr] for lp, lt, lc, hr in \
+                     zip(real_labels, trained_labels, lc_all, hr_all)\
+                     if lt == lpredict ]
+        human_all = [[lp, lt, lc, hr] for lp, lt, lc, hr in \
+                     zip(real_labels, trained_labels, lc_all, hr_all)\
+                     if lt == ltrue ]
+
+        np.random.shuffle(robot_all)
+        np.random.shuffle(human_all)
+        robot_all = robot_all[:6]
+        human_all = human_all[:6]
+
+        sns.set_style("darkgrid")
+        current_palette = sns.color_palette()
+        fig = plt.figure(figsize=(10,15))
+
+        def plot_lcs(times, counts, hr1, hr2, xcoords, ycoords, colspan, rowspan):
+            #print("plotting in grid point " + str((xcoords[0], ycoords[0])))
+            ax = plt.subplot2grid((9,6),(xcoords[0], ycoords[0]), colspan=colspan, rowspan=rowspan)
+            ax.plot(times, counts, lw=2, linestyle="steps-mid", rasterized=True)
+            ax.set_xlim([times[0], times[-1]])
+            ax.set_ylim([0.0, 12000.0])
+            #print("plotting in grid point " + str((xcoords[1], ycoords[1])))
+
+            ax = plt.subplot2grid((9,6),(xcoords[1], ycoords[1]), colspan=colspan, rowspan=rowspan)
+            ax.scatter(hr1, hr2, facecolor=current_palette[1], edgecolor="none", rasterized=True)
+            ax.set_xlim([.27, 0.85])
+            ax.set_ylim([0.04, 0.7])
+
+            #print("plotting in grid point " + str((xcoords[2], ycoords[2])))
+            ax = plt.subplot2grid((9,6),(xcoords[2], ycoords[2]), colspan=colspan, rowspan=rowspan)
+            dt = np.min(np.diff(times))
+            ps = powerspectrum.PowerSpectrum(times, counts=counts/dt, norm="rms")
+            ax.loglog(ps.freq[1:], ps.ps[1:], linestyle="steps-mid", rasterized=True)
+            ax.set_xlim([ps.freq[1], ps.freq[-1]])
+            ax.set_ylim([1.e-6, 10.])
+
+            return
+
+        ## first plot misclassified:
+        plot_lcs(times, counts, hr1, hr2, [0,0,0], [0,2,4], 2, 2)
+
+        ## now plot examples
+        for i in range(4):
+            r = robot_all[i]
+            h = human_all[i]
+            #print(h[0])
+            #print("human indices: " + str([ [i+3, i+3, i+3], [pos_human, pos_human+1, pos_human+2]]))
+            #print("robot indices: " + str([[i+3, i+3, i+3], [pos_robot, pos_robot+1, pos_robot+2]]))
+            plot_lcs(h[2][0], h[2][1], h[3][0], h[3][1], [i+2, i+2, i+2], [pos_human, pos_human+1, pos_human+2], 1, 1)
+            plot_lcs(r[2][0], r[2][1], r[3][0], r[3][1], [i+2, i+2, i+2], [pos_robot, pos_robot+1, pos_robot+2], 1, 1)
+
+        ax = plt.subplot2grid((9,6),(8,pos_human+1))
+        ax.set_xlim([0,1])
+        ax.set_ylim([0,1])
+        ax.set_xlabel("Human: %s"%ltrue, fontsize=20)
+        ax = plt.subplot2grid((9,6),(8,pos_robot+1))
+        ax.set_xlim([0,1])
+        ax.set_ylim([0,1])
+        ax.set_xlabel("Robot: %s"%lpredict, fontsize=20)
+        plt.savefig(datadir,"misclassified%i.pdf"%j, format="pdf")
+        plt.close()
+
+    return
