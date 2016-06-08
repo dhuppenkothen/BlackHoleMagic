@@ -306,8 +306,8 @@ def supervised_all(fscaled_full, labels_all, tstart,
 
     # do the PCA plots with the full classified states:
     fig, axes = plt.subplots(1,2,figsize=(16,6))
-    features_pca_classified(fscaled_full, labels_all, labels_trained_full, axes=axes,
-                            algorithm="pca")
+    features_pca_classified(fscaled_full, labels_all, labels_trained_full,
+                            axes=axes, algorithm="pca")
     axes[1].set_ylabel("")
     plt.tight_layout()
     plt.savefig(datadir+namestr+"_features_pca.pdf", format="pdf")
@@ -321,7 +321,7 @@ def supervised_all(fscaled_full, labels_all, tstart,
     plt.close()
 
     fig, ax = plt.subplots(1,1, figsize=(9,9))
-    ax = plotting.transition_matrix(labels_trained_full, ax=ax)
+    ax = plotting.transition_matrix(labels_trained_full, ax=ax, log=True)
     fig.subplots_adjust(bottom=0.15, left=0.15)
     plt.savefig(datadir+namestr+"_transmat.pdf", format="pdf")
     plt.close()
@@ -368,3 +368,18 @@ def all_figures():
     supervised_validation(fscaled, fscaled_lb, labels, labels_lb, lc_lb,
                           hr_lb, datadir="./", namestr="grs1915_supervised",
                           misclassified=False)
+
+    # supervised learning of the whole data set:
+    supervised_all(fscaled_full, labels_all, tstart,
+                   datadir=datadir, namestr="grs1915_supervised")
+
+    # same using physical labels:
+    labels_phys = feature_engineering.convert_labels_to_physical(labels)
+
+    labels_all_phys = np.hstack([labels_phys["train"], labels_phys["val"],
+                                 labels_phys["test"]])
+
+    supervised_all(fscaled_full, labels_all_phys, tstart,
+                   datadir=datadir, namestr="grs1915_supervised_phys")
+
+    return
