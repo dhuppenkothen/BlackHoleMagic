@@ -54,9 +54,9 @@ def transition_matrix(labels, ax=None, log=False):
     ax.pcolormesh(transmat_p, cmap=cmap.viridis)
     ax.set_ylabel('Initial state')
     ax.set_xlabel('Final state')
-    ax.set_xticks(range(len(unique_labels)))
+    ax.set_xticks(np.arange(0.5, 0.5+len(unique_labels)), 1.0)
     ax.set_xticklabels(unique_labels, rotation=70)
-    ax.set_yticks(range(len(unique_labels)))
+    ax.set_yticks(np.arange(0.5, 0.5+len(unique_labels)), 1.0)
     ax.set_yticklabels(unique_labels)
 
     return ax
@@ -116,10 +116,10 @@ def confusion_matrix(labels_true, labels_pred, log=False,
     ax.pcolormesh(confmatrix, cmap=cm)
     ax.set_ylabel('True label')
     ax.set_xlabel('Predicted label')
-    ax.set_xticks(range(len(unique_labels)))
+    ax.set_xticks(np.arange(0.5, 0.5+len(unique_labels), 1.0))
     ax.set_xticklabels(unique_labels, rotation=70)
 
-    ax.set_yticks(range(len(unique_labels)))
+    ax.set_yticks(np.arange(0.5, 0.5+len(unique_labels), 1.0))
     ax.set_yticklabels(unique_labels)
 
     return ax
