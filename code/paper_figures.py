@@ -421,4 +421,21 @@ def all_figures():
     supervised_all(fscaled_full, labels_all_phys, tstart,
                    datadir=datadir, namestr="grs1915_supervised_phys")
 
+    # classification on the whole data set at the same time:
+    fscaled_cls = fscaled_full[labels_all != "None"]
+    labels_cls = labels_all[labels_all != "None"]
+
+    max_depth = 200.0
+    rfc = RandomForestClassifier(n_estimators=500,max_depth=max_depth)
+    rfc.fit(fscaled_cls, labels_cls)
+
+    labels_trained_full = rfc.predict(fscaled_full)
+
+    # Figures showing distributions of eta and omega
+    fig, axes = plt.subplots(1,2,figsize=(16,6))
+    plot_eta_omega(labels_all, labels_trained_full, axes=axes)
+    plt.tight_layout()
+    plt.savefig(datadir+"grs1915_supervised_eta_omega.pdf", format="pdf")
+    plt.close()
+
     return
