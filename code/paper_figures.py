@@ -161,7 +161,7 @@ def states_distribution(labels_trained_full, ax=None):
     st = pd.Series(labels_trained_full)
     nstates = st.value_counts()
     nstates.plot(kind='bar', color=sns.color_palette()[0], ax=ax)
-    ax.set_ylim(0, 3900)
+    ax.set_ylim(0, 1.05*np.max(nstates))
     ax.set_title("Distribution of states from the supervised classification")
 
     return ax
@@ -216,8 +216,8 @@ def supervised_validation(fscaled, fscaled_lb, labels, labels_lb, lc_lb,
     return
 
 
-def plot_asm_with_classes(labels_predict, tstart, ax=None, datadir="./",
-                          palette="Set3"):
+def plot_asm_with_classes(labels_predict, tstart, fig=None, ax=None,
+                          datadir="./", palette="Set3"):
 
     pred_label_set = np.unique(labels_predict)
     colors = sns.color_palette(palette, len(pred_label_set))
@@ -243,7 +243,7 @@ def plot_asm_with_classes(labels_predict, tstart, ax=None, datadir="./",
     end_time = start_time + plot_len
     i = 0
 
-    if ax is None:
+    if fig is  None and ax is None:
         fig, ax = plt.subplots(1,1,figsize=(12,15))
     sns.set_style("white")
     # Turn off axis lines and ticks of the big subplot
@@ -284,6 +284,9 @@ def plot_asm_with_classes(labels_predict, tstart, ax=None, datadir="./",
     ax.set_ylabel("Count rate [counts/s]", fontsize=18)
 
     return ax
+
+def plot_eta_omega():
+
 
 def supervised_all(fscaled_full, labels_all, tstart,
                    datadir="./", namestr="grs1915_supervised"):
@@ -375,9 +378,15 @@ def all_figures():
 
     # same using physical labels:
     labels_phys = feature_engineering.convert_labels_to_physical(labels)
+    labels_phys_lb = feature_engineering.convert_labels_to_physical(labels_lb)
 
     labels_all_phys = np.hstack([labels_phys["train"], labels_phys["val"],
                                  labels_phys["test"]])
+
+    supervised_validation(fscaled, fscaled_lb, labels_phys, labels_phys_lb,
+                          lc_lb, hr_lb, datadir="./",
+                          namestr="grs1915_supervised_phys",
+                          misclassified=False)
 
     supervised_all(fscaled_full, labels_all_phys, tstart,
                    datadir=datadir, namestr="grs1915_supervised_phys")
