@@ -166,25 +166,36 @@ def states_distribution(labels_trained_full, ax=None):
 
     return ax
 
-def plot_eta_omega(labels_all, labels_predict_phys, ax=None):
+def plot_eta_omega(labels_all, labels_predict_phys, axes=None):
 
-    labels_eta_omega = labels_all[(labels_all == "eta") |
-                                  (labels_all == "omega")]
+    labels_eta_phys = labels_predict_phys[(labels_all == "eta")]
+    labels_omega_phys = labels_predict_phys[(labels_all == "omega")]
 
-    labels_eta_omega_phys = labels_predict_phys[(labels_all == "eta") |
-                                           (labels_all == "omega")]
+    if axes is None:
+        fig, axes = plt.subplots(1,2,figsize=(16,6), sharey=True)
 
-    if ax is None:
-        fig, ax = plt.subplots(1,1,figsize=(9,7))
-
-    st = pd.Series(labels_eta_omega_phys)
+    st = pd.Series(labels_eta_phys)
     nstates = st.value_counts()
-    nstates.plot(kind='bar', color=sns.color_palette()[0], ax=ax)
-    ax.set_ylim(0, 1.05*np.max(nstates))
+    nstates.plot(kind='bar', color=sns.color_palette()[0], ax=axes[0])
+    axes[0].set_ylim(0, 1.05*np.max(nstates))
 
-    ax.set_title("Distribution of eta and omega states")
-    ax.set_xlabel("States")
-    ax.set_ylabel("Number of samples")
+    axes[0].set_title("Distribution for state Eta")
+    axes[0].set_xlabel("States")
+    axes[0].set_ylabel("Number of samples")
+
+    st = pd.Series(labels_omega_phys)
+    nstates = st.value_counts()
+    nstates.plot(kind='bar', color=sns.color_palette()[0], ax=axes[1])
+    axes[1].set_ylim(0, 1.05*np.max(nstates))
+    axes[1].set_title("Distribution for stat Omega")
+    axes[1].set_xlabel("States")
+    #ax2.set_ylabel("Number of samples")
+
+    return axes
+
+
+
+
 
     return ax
 
