@@ -48,7 +48,7 @@ def features_pca(datadir, tseg, log_features=None, ranking=None, axes=None,
     if axes is None:
         fig, axes = plt.subplots(1,2,figsize=(16,6), sharey=True)
 
-    xlim = [np.min(fscaled_trans[:,0])-0.5, np.max(fscaled_trans[:,0])+0.5] # [-6.2, 8.0]
+    xlim = [np.min(fscaled_trans[:,0])-0.5, np.max(fscaled_trans[:,0])+3.5] # [-6.2, 8.0]
     ylim = [np.min(fscaled_trans[:,1])-0.5, np.max(fscaled_trans[:,1])+0.5] # [-7.0, 8.0]
     ax1, ax2 = axes[0], axes[1]
 
