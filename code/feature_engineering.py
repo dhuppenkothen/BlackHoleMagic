@@ -116,13 +116,13 @@ def load_features(datadir, tseg, log_features=None, ranking=None):
 
     print("after removal: " + str(np.where(features_all_full[:,17] >= 20)[0]))
 
-    if log_features is None:
-        log_features = [2, 5, 6, 7, 9, 10, 11, 14, 16]
+#    if log_features is None:
+#        log_features = [2, 5, 6, 7, 9, 10, 11, 14, 16]
 
-    for l in log_features:
-        features_train_full[:,l] = np.log(features_train_full[:,l])
-        features_test_full[:,l] = np.log(features_test_full[:,l])
-        features_val_full[:,l] = np.log(features_val_full[:,l])
+#    for l in log_features:
+#        features_train_full[:,l] = np.log(features_train_full[:,l])
+#        features_test_full[:,l] = np.log(features_test_full[:,l])
+#        features_val_full[:,l] = np.log(features_val_full[:,l])
 
     labels_train_full = transform_chi(labels_train_full)
     labels_test_full = transform_chi(labels_test_full)
@@ -196,6 +196,8 @@ def labelled_data(features, labels, lc, hr, tstart):
 
     labels_lb = {"train": labels_train,
               "test": labels_test,
+
+
               "val": labels_val}
 
     lc_lb = {"train": lc_train,
@@ -281,11 +283,11 @@ def greedy_search(datadir, seg_length_supervised=1024.):
 
     features_lb, labels_lb, lc_lb, hr_lb, tstart_lb = labelled_data(features,
                                                                     labels,
-                                                                    lc, hr)
-
-    features_train = features_lb["train"]
-    features_val = features_lb["val"]
-    features_test = features_lb["test"]
+                                                                    lc, hr, tstart)
+    fscaled, fscaled_lb = scale_features(features, features_lb)
+    features_train = fscaled_lb["train"]
+    features_val = fscaled_lb["val"]
+    features_test = fscaled_lb["test"]
     labels_train = labels_lb["train"]
     labels_val =  labels_lb["val"]
     labels_test = labels_lb["test"]
@@ -312,18 +314,30 @@ def greedy_search(datadir, seg_length_supervised=1024.):
                 fv = np.atleast_2d(features_val[:,j]).T
                 fte = np.atleast_2d(features_test[:,j]).T
             else:
-                ft = np.concatenate((features_new_train, ft), 1)
-                fv = np.concatenate((features_new_val, fv), 1)
-                fte = np.concatenate((features_new_test, fte), 1)
+                #print("features_new_train.shape: " + str(features_new_train.shape))
+                #print("features_train[:,j].shape: " + str(features_train[:,j].T.shape))
+                ft = np.vstack([features_new_train.T, features_train[:,j]]).T
+                fv = np.vstack([features_new_val.T, features_val[:,j]]).T
+                fte = np.vstack([features_new_test.T, features_test[:,j]]).T
             ### scale features
             f_all = np.concatenate((ft, fv, fte))
 
-            scaler_train = StandardScaler().fit(f_all)
-            fscaled_train = scaler_train.transform(ft)
-        
-            fscaled_val = scaler_train.transform(fv)
+            #scaler_train = StandardScaler().fit(f_all)
+            #fscaled_train = scaler_train.transform(ft)       
+            #fscaled_val = scaler_train.transform(fv)
+            fscaled_train = ft
+            fscaled_val = fv
             ### Random Forest Classifier
-            params = {'max_depth': [10,50,100,200,400]}#,
+            #print("ft.shape: " + str(ft.shape))
+            #print("f_all.shape: " + str(f_all.shape))
+            #print("fscaled_train.shape: " + str(fscaled_train.shape))
+ 
+            max_features = np.array([1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,25,27,30,32,34])
+            max_ind = max_features.searchsorted(f_all.shape[1])
+            max_features_to_use = max_features[:max_ind+1]
+            print("max_features: " + str(max_features_to_use))
+            params = {'max_depth': [10,50,100,200,400,600,1000],
+                      'max_features':max_features_to_use}#,
             grid_rfc = GridSearchCV(RandomForestClassifier(n_estimators=250),
                                     param_grid=params, verbose=0, n_jobs=15)
 
