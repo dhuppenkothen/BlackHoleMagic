@@ -327,39 +327,50 @@ def supervised_all(fscaled_full, labels_all, tstart,
     fscaled_cls = fscaled_full[labels_all != "None"]
     labels_cls = labels_all[labels_all != "None"]
 
+    print("Running the classifier ...")
+
     max_depth = 200.0
     rfc = RandomForestClassifier(n_estimators=500,max_depth=max_depth)
     rfc.fit(fscaled_cls, labels_cls)
 
     labels_trained_full = rfc.predict(fscaled_full)
 
+    print("Plotting the distribution of states ...")
     fig, ax = plt.subplots(1,1,figsize=(9,7))
-    states_distribution(labels_trained_full, ax=None)
+    ax = states_distribution(labels_trained_full, ax=None)
     fig.subplots_adjust(bottom=0.15)
     plt.savefig(datadir+namestr+"_states_histogram.pdf", format="pdf")
     plt.close()
 
+    print("Plotting PCA representation of states ...")
     # do the PCA plots with the full classified states:
     fig, axes = plt.subplots(1,2,figsize=(16,6))
-    features_pca_classified(fscaled_full, labels_all, labels_trained_full,
+    ax1, ax2 = features_pca_classified(fscaled_full, labels_all, labels_trained_full,
                             axes=axes, algorithm="pca")
-    axes[1].set_ylabel("")
+    ax2.set_ylabel("")
     plt.tight_layout()
     plt.savefig(datadir+namestr+"_features_pca.pdf", format="pdf")
     plt.close()
 
+    print("Plotting ASM light curves with classified states ...")
     # Plot ASM light curve with classified states:
     fig, ax = plt.subplots(1,1,figsize=(16,22))
-    ax = plot_asm_with_classes(labels_trained_full, tstart, datadir=datadir,
-                          ax=ax, palette="Set3")
+    fig, ax = plot_asm_with_classes(labels_trained_full, tstart, datadir=datadir,
+                                    fig=fig, ax=ax, palette="Set3")
     plt.savefig(datadir+namestr+"asm_lc_all.pdf")
     plt.close()
 
+    print("plotting transition matrix ...")
     fig, ax = plt.subplots(1,1, figsize=(9,9))
     ax = plotting.transition_matrix(labels_trained_full, ax=ax, log=True)
     fig.subplots_adjust(bottom=0.15, left=0.15)
+    plt.tight_layout()
     plt.savefig(datadir+namestr+"_transmat.pdf", format="pdf")
     plt.close()
+
+    print("Finished!")
+
+    return
 
 def all_figures():
     datadir = "../../"
