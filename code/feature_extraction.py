@@ -602,7 +602,7 @@ def make_features(seg, k=10, bins=30, lamb=None,
 
         ## time series summary features
         fmean, fmedian, fvar, fskew, fkurt = timeseries_features(s)
-        features_temp.extend([fmean, fmedian, fvar, fskew, fkurt])
+        features_temp.extend([fmean, fmedian, np.log(fvar), fskew, fkurt])
 
 
         if ps_summary:
@@ -612,7 +612,7 @@ def make_features(seg, k=10, bins=30, lamb=None,
             if len(maxfreq) == 0: 
                 features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
             else: 
-                features_temp.extend([maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2])
+                features_temp.extend([np.log(maxfreq), np.log(psd_a), np.log(psd_b), np.log(psd_c), np.log(psd_d), np.log(pc1), np.log(pc2)])
 #                features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
 
         else:
@@ -627,7 +627,7 @@ def make_features(seg, k=10, bins=30, lamb=None,
             #print("len(features): " + str(len(features_temp)))
             features_temp.extend([mu1, mu2])
             #print(len(features_temp))
-            features_temp.extend([cov[0], cov[1], cov[3]])
+            features_temp.extend([np.log(cov[0]), cov[1], np.log(cov[3])])
             #print(len(features_temp))
             features_temp.extend(list(skew))
             #print(len(features_temp))

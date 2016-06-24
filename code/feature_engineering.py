@@ -4,9 +4,10 @@ import generaltools as gt
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import StandardScaler
 from sklearn.grid_search import GridSearchCV
-from sklearn.cross_validation import KFold
+from sklearn.cross_validation import KFold, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn import cross_validation
 from sklearn.metrics import confusion_matrix
 import matplotlib.cm as cmap
@@ -116,13 +117,13 @@ def load_features(datadir, tseg, log_features=None, ranking=None):
 
     print("after removal: " + str(np.where(features_all_full[:,17] >= 20)[0]))
 
-    if log_features is None:
-        log_features = [2, 5, 6, 7, 9, 10, 11, 14, 16]
+#    if log_features is None:
+#        log_features = [2, 5, 6, 7, 9, 10, 11, 14, 16]
 
-    for l in log_features:
-        features_train_full[:,l] = np.log(features_train_full[:,l])
-        features_test_full[:,l] = np.log(features_test_full[:,l])
-        features_val_full[:,l] = np.log(features_val_full[:,l])
+#    for l in log_features:
+#        features_train_full[:,l] = np.log(features_train_full[:,l])
+#        features_test_full[:,l] = np.log(features_test_full[:,l])
+#        features_val_full[:,l] = np.log(features_val_full[:,l])
 
     labels_train_full = transform_chi(labels_train_full)
     labels_test_full = transform_chi(labels_test_full)
@@ -196,6 +197,8 @@ def labelled_data(features, labels, lc, hr, tstart):
 
     labels_lb = {"train": labels_train,
               "test": labels_test,
+
+
               "val": labels_val}
 
     lc_lb = {"train": lc_train,
@@ -281,8 +284,11 @@ def greedy_search(datadir, seg_length_supervised=1024.):
 
     features_lb, labels_lb, lc_lb, hr_lb, tstart_lb = labelled_data(features,
                                                                     labels,
-                                                                    lc, hr)
+                                                                    lc, hr, tstart)
 
+    labels_all = np.hstack([labels_lb["train"], labels_lb["val"], labels_lb["test"]])
+
+    fscaled, fscaled_lb = scale_features(features, features_lb)
     features_train = features_lb["train"]
     features_val = features_lb["val"]
     features_test = features_lb["test"]
@@ -312,28 +318,44 @@ def greedy_search(datadir, seg_length_supervised=1024.):
                 fv = np.atleast_2d(features_val[:,j]).T
                 fte = np.atleast_2d(features_test[:,j]).T
             else:
-                ft = np.concatenate((features_new_train, ft), 1)
-                fv = np.concatenate((features_new_val, fv), 1)
-                fte = np.concatenate((features_new_test, fte), 1)
+                #print("features_new_train.shape: " + str(features_new_train.shape))
+                #print("features_train[:,j].shape: " + str(features_train[:,j].T.shape))
+                ft = np.vstack([features_new_train.T, features_train[:,j]]).T
+                fv = np.vstack([features_new_val.T, features_val[:,j]]).T
+                fte = np.vstack([features_new_test.T, features_test[:,j]]).T
             ### scale features
-            f_all = np.concatenate((ft, fv, fte))
-
-            scaler_train = StandardScaler().fit(f_all)
-            fscaled_train = scaler_train.transform(ft)
-        
-            fscaled_val = scaler_train.transform(fv)
+            f_all = np.vstack([ft, fv, fte]) 
+            print("f_all.shape: " + str(f_all.shape)) 
             ### Random Forest Classifier
-            params = {'max_depth': [10,50,100,200,400]}#,
-            grid_rfc = GridSearchCV(RandomForestClassifier(n_estimators=250),
-                                    param_grid=params, verbose=0, n_jobs=15)
+ 
+            #max_features = np.array([1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,25,27,30,32,34])
+            #max_ind = max_features.searchsorted(f_all.shape[1])
+            #max_features_to_use = max_features[:max_ind+1]
+            #print("max_features: " + str(max_features_to_use))
+            #params = {'max_depth': [10,50,100,200,400,600,1000],
+            #          'max_features':max_features_to_use}#,
+ 
+            scaler_train = StandardScaler().fit(ft)
+            fscaled_train = scaler_train.transform(ft)
+            fscaled_val = scaler_train.transform(fv)
 
-            grid_rfc.fit(fscaled_train, labels_train)
-            best_params.append(grid_rfc.best_params_)
-            score.append(grid_rfc.score(fscaled_val, labels_val))
-    
+            lr = LogisticRegression(penalty="l1", class_weight="balanced", 
+                        solver="liblinear")
+
+            params = {'C': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]}#,
+            #'max_features':[2,3,4,5,6,7,8,10,12,14,16,17,18,19,20,22,24,26,28,30,32,34]}
+            grid_lr = GridSearchCV(lr, param_grid=params,
+                            verbose=0, n_jobs=10)
+            #grid_rfc = GridSearchCV(RandomForestClassifier(n_estimators=250),
+            #                        param_grid=params, verbose=0, n_jobs=15)
+ 
+            grid_lr.fit(fscaled_train, labels_train)
+            best_params.append(grid_lr.best_params_)
+            score.append(grid_lr.score(fscaled_val, labels_val))
         score_all.append(score)
         best_params_all.append(best_params)
-        best_ind = np.where(score == np.max(score))[0]
+        mean_scores = np.array([np.mean(s) for s in score])
+        best_ind = np.where(mean_scores == np.max(mean_scores))[0]
         print("best_ind: " + str(best_ind))
         if len(best_ind) > 1:
             best_ind = best_ind[0]
