@@ -162,7 +162,7 @@ We minimize the following equation with respect to the weight vector $w$ to infe
 Power spectral features are based on \citep{heil2015}. We compute power spectra in fractional rms normalization for all available light curves and integrate over frequencies in order to compute the fractional rms amplitude in different frequency bands. 
 Following the power colours defined in \citet{heil2015}, we choose our bands to be $P_\mathrm{A} = 0.0039-0.031 \,\mathrm{Hz}$, 
 $P_\mathrm{B} = 0.031-0.25 \,\mathrm{Hz}$, $P_\mathrm{C} =  0.25-2.0 \,\mathrm{Hz}$ and $P_\mathrm{D} = 2.0-16.0 \,\mathrm{Hz}$. We also construct power colours $\mathrm{PC}_1 = P_\mathrm{C}/P_\mathrm{A}$ and  $\mathrm{PC}_2 = P_\mathrm{B}/P_\mathrm{D}$.
-In some states, a quasi-periodic oscillation is clearly present. As a simple proxy and to avoid power spectral fitting, we design a feature composed of the frequency where $\nuP_\nu$ has its maximum. 
+In some states, a quasi-periodic oscillation is clearly present. As a simple proxy and to avoid power spectral fitting, we design a feature composed of the frequency where $\nu P_\nu$ has its maximum. 
 
 Because these features offer only an incomplete description of the power spectrum in different states, in particular in the presence of a QPO cannot be completely described by the prescriptions above (partly because the power spectral bands are much broader, thus a QPO might not have a pronounced effect). Instead, we build a PCA representation of the power spectra and include the principal components as features. The number of PCA components, $N_\mathrm{PCA}$ is a free parameter, and will be discussed in more detail in Section \ref{sec:freeparams} below. 
 
@@ -178,14 +178,14 @@ It is worth noting that we explored the use of other techniques to extract hardn
 
 We randomly split the observations in training, validation and test data sets, with $50\%$ of observations in the training set and $25\%$ of all observations in the validation and test sets each. This results in $4269$ samples in the training data set, $2148$ samples in the validation set, and $2089$ sample in the test data set.  The differences in samples in the validation and test set are due to the fact that we split \textit{observations} (i.e. before creating segments of equal length) rather than samples. This is necessary because we extract overlapping segments, thus picking randomly from segments would lead to the loss of independence between training, validation and test data sets. 
 
-For feature selection and supervised classification, we use the combined previous classifications by \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003} in order to capture all $14$ currently known states, but include only classifications where the entire observation was seen to be in a single state in order to avoid accidental mis-classification as the source switches states within an observation. This yields a total of $1884$ previously classified samples, with $986$ classified samples in the training set, $431$ samples in the validation set and $467$ samples in the test set, respectively. Note that the data set is heavily imbalanced with respect to class representation: previously, the source was known to spend the majority of its time in the $\Chi$ state, while other states (e.g.\ $\eta$ and $\omega$) were only seen in one or two observations. 
+For feature selection and supervised classification, we use the combined previous classifications by \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003} in order to capture all $14$ currently known states, but include only classifications where the entire observation was seen to be in a single state in order to avoid accidental mis-classification as the source switches states within an observation. This yields a total of $1884$ previously classified samples, with $986$ classified samples in the training set, $431$ samples in the validation set and $467$ samples in the test set, respectively. Note that the data set is heavily imbalanced with respect to class representation: previously, the source was known to spend the majority of its time in the $\chi$ state, while other states (e.g.\ $\eta$ and $\omega$) were only seen in one or two observations. 
 
 Initial visualization showed that some features span a wide range of values. Because machine learning methods tend to do better in well-behaved (linear) feature spaces, we take the logarithm of features that extend over several orders of magnitude. In particular, these features are: the variance of the light curve, the frequency where the power spectrum peaks, all fractional rms values and power colours derived from the power spectrum, and the variances of both hardness ratios. 
 
 \subsubsection{Free Parameters}
 \label{sec:freeparams}
 
-We estimated free parameters of the model, in particular during the feature extraction stage, using a grid-search cross-validation approach. For a range of reasonable parameters and combinations, we tested performance on a supervised classification task using a Random Forest Classifier and the data with human labels are presented in \citet{belloni2000}, \citet{kleinwolt2002} and \citet{}. An overview of all free parameters in the classification model is given in \Table{ref:parameters}.
+We estimated free parameters of the model, in particular during the feature extraction stage, using a grid-search cross-validation approach. For a range of reasonable parameters and combinations, we tested performance on a supervised classification task using a Random Forest Classifier and the data with human labels are presented in \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003}. An overview of all free parameters in the classification model is given in \ref{table:parameters}.
 
 In order to estimate which parameters will yield the optimal results, we use supervised learning in the form of Logistic Regression (\citealt{cox1958}; as implemented in \textit{scikit-learn} \citealt{scikit-learn}). Logistic Regression is one of the simplest classification algorithms. It defines a linear model analogously to linear regression, but because outcomes are discrete rather than continuous, it uses a binomial distribution (multinomial distribution if more than two outcomes are possible) instead of a normal distribution in defining the likelihood. In practical terms, logistic regression aims to draw a hyperplane in the $N$-dimensional space spanned by all features such that the hyperplane separates samples belonging to a given class in the training set from the remainder. Multi-class classification is performed either using a multinomial distribution or by using a one-versus-all scheme: for each class in the training set, a separate hyperplane is drawn such that the split between samples belonging to said class and the remaining samples is maximized. We use the the least squares (L2) norm for regularization, which introduces an additional parameter, $C$, for controlling the magnitude of the regularization into the  model. 
 
@@ -198,7 +198,7 @@ values used for the classification, yielding a total of $34$ features for each o
 \caption{Model Parameters}
 %\resizebox{\textwidth}{!}{%
 \begin{threeparttable} 
-\begin{tabularx}{\textwidth}{p{2.0cm}p{10.0cm}X}%lrrrllll}%{lrrrllll}
+\begin{tabularx}{\textwidth}{p{2.0cm}p{2.0cm}p{5.0cm}p{1.0cm}p{6.0cm}}%lrrrllll}%{lrrrllll}
 %\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} cll}%lrrrllll}%{lrrrllll}
 %\begin{tabular}{|l|r|r|l|r|r|r|r|l|}
 \toprule
@@ -221,13 +221,13 @@ Power spectrum PCA & $N$ & Number of components & $3$ & $[1,2,3,5,10,20,50,100]$
 \label{tab:parameters}
 \end{table*}
 
-\begin{figure*}[htbp]
+\begin{figure}[htbp]
 \begin{center}
-\includegraphics[width=\textwidth]{grs1915_feature_accuracy}
+\includegraphics[width=9cm]{grs1915_feature_accuracy}
 \caption{The greedy search for the most important features: the number of features used for classification versus the accuracy (fraction of correctly classified samples) of classification in each case. The search shows that a simple Logistic Regression approach can yield a validation accuracy $>97\%$, and that $11$ features seem to be largely sufficient to classify data from GRS 1915+105.}
 \label{fig:asm_total}
 \end{center}
-\end{figure*}
+\end{figure}
 
 \subsubsection{Feature Importance}
 
@@ -247,44 +247,66 @@ In Figure \ref{fig:scores}, we show the result of the greedy search. We find tha
 \subsubsection{Supervised Classification}
 
 Using the results of the previous sections, we performed supervised classification using Logistic Regression on the GRS 1915+105 data. 
-While the validation accurracy
+Overall, with a $90\%$ accuracy on the test set, the classifier performs very well. This is especially true in light of the small size of the data set as well 
+as the heavy imbalance between classes, offering only a few test cases for some of the rarer states. Additionally, the performance of our model is in 
+line with results from other machine learning tasks based on earlier human classification, where human accuracy is often found to be no better than 
+$\sim 90\%$ (NEED TO FIND THE REFERENCE FOR THIS!). 
 
-
-\begin{table*}[hbtp]
-\renewcommand{\arraystretch}{1.3}
-\footnotesize
-\caption{Final Set of Features}
-%\resizebox{\textwidth}{!}{%
-\begin{threeparttable} 
-\begin{tabularx}{\textwidth}{p{2.0cm}p{10.0cm}X}%lrrrllll}%{lrrrllll}
-%\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} cll}%lrrrllll}%{lrrrllll}
-%\begin{tabular}{|l|r|r|l|r|r|r|r|l|}
-\toprule
-\bf{Feature} & bf{Meaning} 
- \\ \midrule
-
-  \\\bottomrule
-\end{tabularx}
-   \begin{tablenotes}
-      %\footnotesize
-      \item{}
-     %\item[\emph{a}]{See Section \ref{ch6:priortest} for a discussion on testing an alternative, log-normal prior for spike amplitude and exponential rise time scale.}
-     %\item[\emph{b}]{$T_\mathrm{b}$: duration of total burst}
-\end{tablenotes}
-\end{threeparttable}
-\label{tab:priortable}
-\end{table*}
+In Figure \ref{fig:confusion_matrix}, we show the confusion matrix between the human classification and the machine classification on the 
+test set. Generally, only few classes are confused. For these cases, we visually compared the light curves, hardness ratios and power spectra of 
+typical examples (based on the human classification) of both the class chosen by a human and the computer. We find that disagreements between 
+human and machine classification fall into one of three categories:
+\begin{itemize}
+\item{Observations that were likely mis-classified in the original classification by \citet{belloni2000}. In particular, there are examples of the 
+$\lambda$ state for which the logistic regression model infers the $\mu$ state instead. Indeed, many of the properties of these observations, including 
+the overall patterns in the light curve, are much more indicative of the $\mu$ state than the $\lambda$ state.}
+\item{{Observations where the particular choice of segment size ($1024\mathrm{s}$ implies that only part of the overall pattern is observed in this 
+segment. Examples are non-flaring parts of the $\alpha$ state, which are occasionally being mis-classified as $\chi$ observations, and some light 
+curves of the $\omega$ state lacking this state's typical dips, thus making it look more like the $\gamma$ state instead. The small size (for machine 
+learning purposes) of the data set makes it unfavourable to choose longer segments, thus a small fraction of segments always run the risk of being 
+confused in this way. It is worth noting, however, that many of the cases falling in this particular case occur only once or at most twice in the 
+test set for a certain combination of classes, thus they are expected to add only a small amount of noise to the classifications.}
+\item{For some cases where human and machine classifications disagree, the simple summary statistics and linear model used to represent the variability
+ in the light curves fail to fully encode the complexities of the patterns observed in GRS 1915+105. The most striking example is the $\eta$ state, where several 
+ segments were instead classified as belonging to the $\beta$ state instead. Looking at the light curve, it is fairly straightforward for the human brain to distinguish 
+ both states based on the patterns in the light curve. However, for several cases, the model used for encoding variability was not sufficient to fully appreciate the differences between those two states, in particular since the power spectra look fairly similar. Here, a better model for the light curves would clearly have helped with the classification, however, building such a model for light curves as complex as those observed in GRS 1915+105 is a major undertaking and thus the subject of future work.}
+ 
 
 
 
-%%% ADD FIGURE WITH VALIDATION ACCURACY VERSUS NUMBER OF FEATURES
-%%% ADD FIGURE WITH CONFUSION MATRIX FOR SUPERVISED CLASSIFICATION
+% NEED PLOT: Number of segments per state, before/after classification
+% NEED PLOT: transition matrix
+% NEED PLOT: PCA decomposition with all states coloured in
+% NEED PLOT: Time evolution of the states
 
-\section{Unsupervised Classification}
-
-% Look at time evolution: 
+% Look at time evolution + transition matrix: 
 % - is there a "connecting" state that the source jumps in and out of?
+% - do certain states always follow each other
 % - are there cycles?
+% Look at overall distribution of states versus training set: are the first four years representative of the long-term evolution?
+
+\item{}
+\end{itemize}
+
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_cm.pdf}
+\caption{Confusion matrix for the machine classification (x-axis) versus the human classification (assumed as the ``true label'') on the 
+y-axis. On the diagonal are classes where the human and machine classifications agree. Off-diagonal cases occur where there is a 
+disagreement.} 
+\label{fig:confusion_matrix}
+\end{center}
+\end{figure}
+
+
+\subsection{Supervised Classification with Physically Motivated Labels}
+
+% Add "physical" classification based on chaotic versus deterministic classification
+% - What does the source spend most of its time in?
+% - Are there certain sequences of states appearing often? Are there certain states always following other states?
+% - What classes do eta and omega most likely belong to?
+
 
 \section{Discussion}
 
