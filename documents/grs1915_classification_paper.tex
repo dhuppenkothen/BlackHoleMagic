@@ -252,6 +252,16 @@ as the heavy imbalance between classes, offering only a few test cases for some 
 line with results from other machine learning tasks based on earlier human classification, where human accuracy is often found to be no better than 
 $\sim 90\%$ (NEED TO FIND THE REFERENCE FOR THIS!). 
 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_cm.pdf}
+\caption{Confusion matrix for the machine classification (x-axis) versus the human classification (assumed as the ``true label'') on the 
+y-axis. On the diagonal are classes where the human and machine classifications agree. Off-diagonal cases occur where there is a 
+disagreement.} 
+\label{fig:confusion_matrix}
+\end{center}
+\end{figure}
+
 In Figure \ref{fig:confusion_matrix}, we show the confusion matrix between the human classification and the machine classification on the 
 test set. Generally, only few classes are confused. For these cases, we visually compared the light curves, hardness ratios and power spectra of 
 typical examples (based on the human classification) of both the class chosen by a human and the computer. We find that disagreements between 
@@ -270,10 +280,13 @@ test set for a certain combination of classes, thus they are expected to add onl
  in the light curves fail to fully encode the complexities of the patterns observed in GRS 1915+105. The most striking example is the $\eta$ state, where several 
  segments were instead classified as belonging to the $\beta$ state instead. Looking at the light curve, it is fairly straightforward for the human brain to distinguish 
  both states based on the patterns in the light curve. However, for several cases, the model used for encoding variability was not sufficient to fully appreciate the differences between those two states, in particular since the power spectra look fairly similar. Here, a better model for the light curves would clearly have helped with the classification, however, building such a model for light curves as complex as those observed in GRS 1915+105 is a major undertaking and thus the subject of future work.}
+\end{itemize}
+
+The multinomial probability distribution used in the logistic regression model allows for calculating the predicted probability for each class and each sample. We compared the predicted probabilities for each human-generated class and computer-generated class for all of the confused cases and compared them to those cases where human and computer-generated classifications agree. While samples where human and computer agree show a very high predicted probability for the chosen class ($>0.9$ in more than $75\%$ of all cases), this is generally not the case for confused cases, where the predicted probability of the class chosen by the computer can be as small as $0.3$ and close to the human-generated class. Cases with the closest probabilities between human and computer-generated classes 
+are more prevalent in second category laid out above. Conversely, for some confused cases, the predicted probability for the computer-generated class is very high, $>0.8$. These cases tend to be in the first and third category. 
  
 
-
-
+In Figure \ref{fig:state_counts}
 % NEED PLOT: Number of segments per state, before/after classification
 % NEED PLOT: transition matrix
 % NEED PLOT: PCA decomposition with all states coloured in
@@ -285,19 +298,8 @@ test set for a certain combination of classes, thus they are expected to add onl
 % - are there cycles?
 % Look at overall distribution of states versus training set: are the first four years representative of the long-term evolution?
 
-\item{}
-\end{itemize}
 
 
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics[width=9cm]{grs1915_supervised_cm.pdf}
-\caption{Confusion matrix for the machine classification (x-axis) versus the human classification (assumed as the ``true label'') on the 
-y-axis. On the diagonal are classes where the human and machine classifications agree. Off-diagonal cases occur where there is a 
-disagreement.} 
-\label{fig:confusion_matrix}
-\end{center}
-\end{figure}
 
 
 \subsection{Supervised Classification with Physically Motivated Labels}
