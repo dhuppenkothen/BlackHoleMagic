@@ -127,7 +127,7 @@ In the following, we use the $3 - 75$ keV band for all time series and power spe
 %
 
 
-\section{Feature Engineering and Supervised Classification}
+\section{Feature Engineering}
 
 While some machine learning algorithms can produce reliable classifications on raw data (e.g. a light curve), these algorithms generally require a very large amount of data of the order of tens of millions of data points or more in order to learn the structure inherent in the data. 
 For most problems in X-ray astronomy, there is not enough data available to make using these methods feasible. Algorithms that work on relatively small data sets exist, but they generally work better with data with fewer dimensions. Therefore, we extract \textit{features} for each data \textit{sample}. 
@@ -173,7 +173,7 @@ Because these features offer only an incomplete description of the power spectru
 It is worth noting that we explored the use of other techniques to extract hardness ratio features, notably 2D histogram maps, Principal Component Analysis (PCA) and manifold learning techniques, and found them to be no better than the summary statistics above, thus we chose the latter for their simplicity and straightforward interpretability. 
 
 
-\subsection{Feature Selection and Supervised Classification}
+\subsection{Feature Selection}
 \label{sec:featureselection}
 
 We randomly split the observations in training, validation and test data sets, with $50\%$ of observations in the training set and $25\%$ of all observations in the validation and test sets each. This results in $4269$ samples in the training data set, $2148$ samples in the validation set, and $2089$ sample in the test data set.  The differences in samples in the validation and test set are due to the fact that we split \textit{observations} (i.e. before creating segments of equal length) rather than samples. This is necessary because we extract overlapping segments, thus picking randomly from segments would lead to the loss of independence between training, validation and test data sets. 
@@ -244,7 +244,7 @@ In Figure \ref{fig:scores}, we show the result of the greedy search. We find tha
 % This artificially inflates significance of my training results!!!
 %
 
-\subsubsection{Supervised Classification}
+\section{Supervised Classification}
 
 Using the results of the previous sections, we performed supervised classification using Logistic Regression on the GRS 1915+105 data. 
 Overall, with a $90\%$ accuracy on the test set, the classifier performs very well. This is especially true in light of the small size of the data set as well 
@@ -261,6 +261,8 @@ disagreement.}
 \label{fig:confusion_matrix}
 \end{center}
 \end{figure}
+
+\subsection{Confused Classifications}
 
 In Figure \ref{fig:confusion_matrix}, we show the confusion matrix between the human classification and the machine classification on the 
 test set. Generally, only few classes are confused. For these cases, we visually compared the light curves, hardness ratios and power spectra of 
@@ -285,11 +287,15 @@ test set for a certain combination of classes, thus they are expected to add onl
 The multinomial probability distribution used in the logistic regression model allows for calculating the predicted probability for each class and each sample. We compared the predicted probabilities for each human-generated class and computer-generated class for all of the confused cases and compared them to those cases where human and computer-generated classifications agree. While samples where human and computer agree show a very high predicted probability for the chosen class ($>0.9$ in more than $75\%$ of all cases), this is generally not the case for confused cases, where the predicted probability of the class chosen by the computer can be as small as $0.3$ and close to the human-generated class. Cases with the closest probabilities between human and computer-generated classes 
 are more prevalent in second category laid out above. Conversely, for some confused cases, the predicted probability for the computer-generated class is very high, $>0.8$. These cases tend to be in the first and third category. 
  
-
+ 
+\subsection{Overall Distribution of States}
 In Figure \ref{fig:state_counts}
+
 % NEED PLOT: Number of segments per state, before/after classification
-% NEED PLOT: transition matrix
 % NEED PLOT: PCA decomposition with all states coloured in
+
+\subsection{Time Evolution of States}
+% NEED PLOT: transition matrix
 % NEED PLOT: Time evolution of the states
 
 % Look at time evolution + transition matrix: 
@@ -297,8 +303,6 @@ In Figure \ref{fig:state_counts}
 % - do certain states always follow each other
 % - are there cycles?
 % Look at overall distribution of states versus training set: are the first four years representative of the long-term evolution?
-
-
 
 
 
