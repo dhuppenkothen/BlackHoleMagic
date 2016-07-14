@@ -181,17 +181,6 @@ We randomly split the observations in training, validation and test data sets, w
 For feature selection and supervised classification, we use the combined previous classifications by \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003} in order to capture all $14$ currently known states, but include only classifications where the entire observation was seen to be in a single state in order to avoid accidental mis-classification as the source switches states within an observation. This yields a total of $1884$ previously classified samples, with $986$ classified samples in the training set, $431$ samples in the validation set and $467$ samples in the test set, respectively. Note that the data set is heavily imbalanced with respect to class representation: previously, the source was known to spend the majority of its time in the $\chi$ state, while other states (e.g.\ $\eta$ and $\omega$) were only seen in one or two observations. 
 
 Initial visualization showed that some features span a wide range of values. Because machine learning methods tend to do better in well-behaved (linear) feature spaces, we take the logarithm of features that extend over several orders of magnitude. In particular, these features are: the variance of the light curve, the frequency where the power spectrum peaks, all fractional rms values and power colours derived from the power spectrum, and the variances of both hardness ratios. 
-
-\subsubsection{Free Parameters}
-\label{sec:freeparams}
-
-We estimated free parameters of the model, in particular during the feature extraction stage, using a grid-search cross-validation approach. For a range of reasonable parameters and combinations, we tested performance on a supervised classification task using a Random Forest Classifier and the data with human labels are presented in \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003}. An overview of all free parameters in the classification model is given in \ref{table:parameters}.
-
-In order to estimate which parameters will yield the optimal results, we use supervised learning in the form of Logistic Regression (\citealt{cox1958}; as implemented in \textit{scikit-learn} \citealt{scikit-learn}). Logistic Regression is one of the simplest classification algorithms. It defines a linear model analogously to linear regression, but because outcomes are discrete rather than continuous, it uses a binomial distribution (multinomial distribution if more than two outcomes are possible) instead of a normal distribution in defining the likelihood. In practical terms, logistic regression aims to draw a hyperplane in the $N$-dimensional space spanned by all features such that the hyperplane separates samples belonging to a given class in the training set from the remainder. Multi-class classification is performed either using a multinomial distribution or by using a one-versus-all scheme: for each class in the training set, a separate hyperplane is drawn such that the split between samples belonging to said class and the remaining samples is maximized. We use the the least squares (L2) norm for regularization, which introduces an additional parameter, $C$, for controlling the magnitude of the regularization into the  model. 
-
-For each combination of parameters listed in Table \ref{tab:parameters}, we use five-fold cross validation on the training set to train the model with these parameters. In cross validation, a part of the data set is held out from the training, and used to test performance of the trained model. In this way, we arrive at the best
-values used for the classification, yielding a total of $34$ features for each of the $8506$ data segments . The features explicitly named above, as well as $10$ weights from the linear model, and $3$ components from performing PCA on the power spectra.
-
 \begin{table*}[hbtp]
 \renewcommand{\arraystretch}{1.3}
 \footnotesize
@@ -220,6 +209,17 @@ Power spectrum PCA & $N$ & Number of components & $3$ & $[1,2,3,5,10,20,50,100]$
 \end{threeparttable}
 \label{tab:parameters}
 \end{table*}
+
+\subsubsection{Free Parameters}
+\label{sec:freeparams}
+
+We estimated free parameters of the model, in particular during the feature extraction stage, using a grid-search cross-validation approach. For a range of reasonable parameters and combinations, we tested performance on a supervised classification task using a Random Forest Classifier and the data with human labels are presented in \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003}. An overview of all free parameters in the classification model is given in \ref{table:parameters}.
+
+In order to estimate which parameters will yield the optimal results, we use supervised learning in the form of Logistic Regression (\citealt{cox1958}; as implemented in \textit{scikit-learn} \citealt{scikit-learn}). Logistic Regression is one of the simplest classification algorithms. It defines a linear model analogously to linear regression, but because outcomes are discrete rather than continuous, it uses a binomial distribution (multinomial distribution if more than two outcomes are possible) instead of a normal distribution in defining the likelihood. In practical terms, logistic regression aims to draw a hyperplane in the $N$-dimensional space spanned by all features such that the hyperplane separates samples belonging to a given class in the training set from the remainder. Multi-class classification is performed either using a multinomial distribution or by using a one-versus-all scheme: for each class in the training set, a separate hyperplane is drawn such that the split between samples belonging to said class and the remaining samples is maximized. We use the the least squares (L2) norm for regularization, which introduces an additional parameter, $C$, for controlling the magnitude of the regularization into the  model. 
+
+For each combination of parameters listed in Table \ref{tab:parameters}, we use five-fold cross validation on the training set to train the model with these parameters. In cross validation, a part of the data set is held out from the training, and used to test performance of the trained model. In this way, we arrive at the best
+values used for the classification, yielding a total of $34$ features for each of the $8506$ data segments . The features explicitly named above, as well as $10$ weights from the linear model, and $3$ components from performing PCA on the power spectra.
+
 
 \begin{figure}[htbp]
 \begin{center}
@@ -252,15 +252,6 @@ as the heavy imbalance between classes, offering only a few test cases for some 
 line with results from other machine learning tasks based on earlier human classification, where human accuracy is often found to be no better than 
 $\sim 90\%$ (NEED TO FIND THE REFERENCE FOR THIS!). 
 
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics[width=9cm]{grs1915_supervised_cm.pdf}
-\caption{Confusion matrix for the machine classification (x-axis) versus the human classification (assumed as the ``true label'') on the 
-y-axis. On the diagonal are classes where the human and machine classifications agree. Off-diagonal cases occur where there is a 
-disagreement.} 
-\label{fig:confusion_matrix}
-\end{center}
-\end{figure}
 
 \subsection{Confused Classifications}
 \label{sec:confusion}
@@ -273,7 +264,7 @@ human and machine classification fall into one of three categories:
 \item{Observations that were likely mis-classified in the original classification by \citet{belloni2000}. In particular, there are examples of the 
 $\lambda$ state for which the logistic regression model infers the $\mu$ state instead. Indeed, many of the properties of these observations, including 
 the overall patterns in the light curve, are much more indicative of the $\mu$ state than the $\lambda$ state.}
-\item{{Observations where the particular choice of segment size ($1024\mathrm{s}$ implies that only part of the overall pattern is observed in this 
+\item{Observations where the particular choice of segment size ($1024\mathrm{s}$ implies that only part of the overall pattern is observed in this 
 segment. Examples are non-flaring parts of the $\alpha$ state, which are occasionally being mis-classified as $\chi$ observations, and some light 
 curves of the $\omega$ state lacking this state's typical dips, thus making it look more like the $\gamma$ state instead. The small size (for machine 
 learning purposes) of the data set makes it unfavourable to choose longer segments, thus a small fraction of segments always run the risk of being 
@@ -285,15 +276,33 @@ test set for a certain combination of classes, thus they are expected to add onl
  both states based on the patterns in the light curve. However, for several cases, the model used for encoding variability was not sufficient to fully appreciate the differences between those two states, in particular since the power spectra look fairly similar. Here, a better model for the light curves would clearly have helped with the classification, however, building such a model for light curves as complex as those observed in GRS 1915+105 is a major undertaking and thus the subject of future work.}
 \end{itemize}
 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_cm.pdf}
+\caption{Confusion matrix for the machine classification (x-axis) versus the human classification (assumed as the ``true label'') on the 
+y-axis. On the diagonal are classes where the human and machine classifications agree. Off-diagonal cases occur where there is a 
+disagreement.} 
+\label{fig:confusion_matrix}
+\end{center}
+\end{figure}
+
 The multinomial probability distribution used in the logistic regression model allows for calculating the predicted probability for each class and each sample. We compared the predicted probabilities for each human-generated class and computer-generated class for all of the confused cases and compared them to those cases where human and computer-generated classifications agree. While samples where human and computer agree show a very high predicted probability for the chosen class ($>0.9$ in more than $75\%$ of all cases), this is generally not the case for confused cases, where the predicted probability of the class chosen by the computer can be as small as $0.3$ and close to the human-generated class. Cases with the closest probabilities between human and computer-generated classes 
 are more prevalent in second category laid out above. Conversely, for some confused cases, the predicted probability for the computer-generated class is very high, $>0.8$. These cases tend to be in the first and third category. 
- 
  
 \subsection{Overall Distribution of States}
 
 In Figure \ref{fig:state_durations} we compare the total duration the source spent in each state during the observed intervals for both the human classified part of the data as well as the computer-generated classification. At the same time, this presents a split in time: \citet{belloni2000} and citet{kleinwolt2002} classified observations between 1996 June and 1999 December, with an additional state identified in an observation on 2003 Mar 6. Trained on these human classifications,
 we allowed the computer to find classes for the remaining observations, spanning from $2000$ Jan to the end of \rxte's lifetime in early 2012. 
 Assuming that the logistic regression model generally reproduces the human classification, one may then use the data set to search for time evolution in the overall pattern of states. 
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_states_histogram.pdf}
+\caption{Fraction of total observation time $T_\mathrm{obs}$ assigned to a certain state in both the human-classified data (1996-$\sim\!\! 2000$; blue) and the machine-classified data ( $\sim\!\! 2000$ - 2011; red). Durations spent in each state are calculated from the human and computer-generated labels taking into 
+account the overlap between segments for long observations.} 
+\label{fig:state_durations}
+\end{center}
+\end{figure}
 
 We find that broadly, the machine classification reproduces the human classification. Particularly the $\chi$ state remains the most common state to find GRS 1915+105 in. Other states such as $\beta$, $\kappa$, $\lambda$, $\mu$, $\rho$ and $\theta$ are represented similarly often, other classes occur with a significantly different frequency in later observations. It is important to note here that the prior on the state occurrences in the logistic regression model was based on the previous state occurrences, that is, a state with a higher previous occurrence was more probable to occur again than a state that was only seen once or twice. In this context, it is interesting to note the relatively higher fraction of time spent in the $\eta$ and $\omega$ states compared to the human-classified data set. 
 This may, to some degree, be due to chance: with only one confirmed observation for each class, and the small fraction of the telescope spent on the source, it is intrinsically hard to reliably estimate the duration of the source previously spent in the source. Similar reasoning may be applied to the $\alpha$ state, though it is interesting that all states that are very rare during the initial four years of observations appear more commonly later, to a higher degree than perhaps originally expected. Conversely, the states $\gamma$ and $\phi$, relatively common during the initial four years, occur much less frequently during later observations.
@@ -313,21 +322,12 @@ Only $33\%$ of samples have a probability of $\omega$ being the true state of $>
 In summary, we conclude that the effect of an increased number of observations in states $\eta$ and $\alpha$ in the machine-classified data are likely real, while the increase in class $\omega$ may well be attributed to mis-classifications that are rooted in an inadequate model for the variability.
 %% Note: maybe plot examples and look at them?
 
- 
-\begin{figure}[htbp]
-\begin{center}
-\includegraphics[width=9cm]{grs1915_supervised_states_histogram.pdf}
-\caption{Fraction of total observation time $T_\mathrm{obs}$ assigned to a certain state in both the human-classified data (1996-$\sim\!\! 2000$; blue) and the machine-classified data ( $\sim\!\! 2000$ - 2011; red). Durations spent in each state are calculated from the human and computer-generated labels taking into 
-account the overlap between segments for long observations.} 
-\label{fig:state_durations}
-\end{center}
-\end{figure}
+For states that are much less represented in the machine-classified data set compared to the original human classification, we explore whether these states might have lost samples due to mis-classification as well. For this, we found all samples where states $\phi$ and $\gamma$, both of which are almost not present in the 
+machine-classified data set, were the second-most probable state, and compared their probability to that of the state the logistic regression model chose for these specific samples. We find that state $\phi$ comes often second to $\chi$-state observations, which is perhaps not surprising given the morphological similarities between the two states. However, because the hardness ratios are quite different for both states, we find that the logistic regression model assigns these samples to class $\chi$ with a very high degree of confidence (with a $\chi$-state probability of $>0.8$ in $>93\%$ of all samples where $\phi$ has the second-highest probability). This indicates that the paucity of $\phi$-state observations in recent years is likely real. 
+For state $\gamma$, on the other hand, the situation is more complex. We find $\sim 200$ segments classified by our model as $\delta$-state observations, of which $\sim XX\%$ (CALCULATE VALUES) have a comparable probability of being state $\gamma$. This fraction is overall large enough to explain the drop in $\gamma$-state observations between the human- and the machine-classified data set.
 
 
-% NEED PLOT: Number of segments per state, before/after classification
 % NEED PLOT: PCA decomposition with all states coloured in
-1999-12-13 00:00:00.000 UTC
-1996-06-12
 
 \subsection{Time Evolution of States}
 % NEED PLOT: transition matrix
