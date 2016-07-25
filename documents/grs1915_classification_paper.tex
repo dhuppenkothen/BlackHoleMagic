@@ -234,7 +234,7 @@ values used for the classification, yielding a total of $34$ features for each o
 In order to assess the relative predictive power of each feature, we implemented a greedy search in order to find the most important features in our set. 
 Once more, we used supervised learning with the previously-classified labels and five-fold cross validation on the training set, but computed the average validation score for each feature independently, as if it was the only feature available for classification. We set the feature with the highest validation score as the most important feature, and then perform a second pass, this time using the combination of the winner of the first round with every other feature. Again, we picked the combination with the highest score, and continued this process until all features were exhausted. This procedure answers simultaneously two questions. (1) It provides a ranking for the relative predictive power of each feature, and (2) it provides an assessment whether all features are required to classify the data. The latter need not necessarily be true: some features (e.g. the power colours) are combinations of other features, and thus the combination of all features might not be required.
 
-In Figure \ref{fig:scores}, we show the result of the greedy search. We find that predictive accuracy is high: $\sim\!\! 97\%$ for the the $11$ best features, which provide most of the predictive power. Adding additional features can even decrease the accuracy in the predictions. The most predictive features are dominated by power spectral features: $\mathrm{PC}_1$ and the power in PSD bands  $P_\mathrm{A} = 0.0039-0.031 \,\mathrm{Hz}$ and $P_\mathrm{B} = 0.031-0.25 \,\mathrm{Hz}$ take the top three spots and can together yield a classification accuracy of $91\%$. Additional improvement is provided by the linear model, with five of its ten components represented in the reduced feature set, as well as the frequency at which $\nu P_\nu$ peaks, the kurtosis of both total light curve and hardness ratio $\mathrm{HR}_1$, and finally mean of hardness ratio $\mathrm{HR}_1$. We continue with the rest of the analysis with this reduced set of 11 features.
+In Figure \ref{fig:scores}, we show the result of the greedy search. We find that predictive accuracy is high: $\sim\!\! 97\%$ on the validation set for the the $11$ best features, which provide most of the predictive power. Adding additional features can even decrease the accuracy in the predictions. The most predictive features are dominated by power spectral features: $\mathrm{PC}_1$ and the power in PSD bands  $P_\mathrm{A} = 0.0039-0.031 \,\mathrm{Hz}$ and $P_\mathrm{B} = 0.031-0.25 \,\mathrm{Hz}$ take the top three spots and can together yield a classification accuracy of $91\%$. Additional improvement is provided by the linear model, with five of its ten components represented in the reduced feature set, as well as the frequency at which $\nu P_\nu$ peaks, the kurtosis of both total light curve and hardness ratio $\mathrm{HR}_1$, and finally mean of hardness ratio $\mathrm{HR}_1$. We continue with the rest of the analysis with this reduced set of 11 features.
 
 
 %%%%
@@ -244,14 +244,24 @@ In Figure \ref{fig:scores}, we show the result of the greedy search. We find tha
 % This artificially inflates significance of my training results!!!
 %
 
+
+\begin{figure*}[htbp]
+\begin{center}
+\includegraphics[width=\textwidth]{grs1915_supervised_pca_comparison.pdf}
+\caption{} 
+\label{fig:supervised_pca}
+\end{center}
+\end{figure*}
+
+
 \section{Supervised Classification}
 
 Using the results of the previous sections, we performed supervised classification using Logistic Regression on the GRS 1915+105 data. 
 Overall, with a $90\%$ accuracy on the test set, the classifier performs very well. This is especially true in light of the small size of the data set as well 
 as the heavy imbalance between classes, offering only a few test cases for some of the rarer states. Additionally, the performance of our model is in 
 line with results from other machine learning tasks based on earlier human classification, where human accuracy is often found to be no better than 
-$\sim 90\%$ (NEED TO FIND THE REFERENCE FOR THIS!). 
-
+$\sim 90\%$ (NEED TO FIND THE REFERENCE FOR THIS!). An illustration of the classification as a whole is presented in Figure \ref{fig:supervised_pca}, 
+where we show a 2-dimensional representation of our 11-dimensional features space achieved with Principal Component Analysis (PCA).
 
 \subsection{Confused Classifications}
 \label{sec:confusion}
@@ -326,8 +336,6 @@ For states that are much less represented in the machine-classified data set com
 machine-classified data set, were the second-most probable state, and compared their probability to that of the state the logistic regression model chose for these specific samples. We find that state $\phi$ comes often second to $\chi$-state observations, which is perhaps not surprising given the morphological similarities between the two states. However, because the hardness ratios are quite different for both states, we find that the logistic regression model assigns these samples to class $\chi$ with a very high degree of confidence (with a $\chi$-state probability of $>0.8$ in $>93\%$ of all samples where $\phi$ has the second-highest probability). This indicates that the paucity of $\phi$-state observations in recent years is likely real. 
 For state $\gamma$, on the other hand, the situation is more complex. We find $\sim 200$ segments classified by our model as $\delta$-state observations, of which $\sim XX\%$ (CALCULATE VALUES) have a comparable probability of being state $\gamma$. This fraction is overall large enough to explain the drop in $\gamma$-state observations between the human- and the machine-classified data set.
 
-
-% NEED PLOT: PCA decomposition with all states coloured in
 
 \subsection{Time Evolution of States}
 % NEED PLOT: transition matrix
