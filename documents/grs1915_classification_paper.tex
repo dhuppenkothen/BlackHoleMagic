@@ -46,7 +46,7 @@
 
 \title{The Long-Term Evolution of GRS 1915+105}
 
-\author{Daniela Huppenkothen\altaffilmark{1, 2, 3}, Lucy M. Heil\altaffilmark{4}, David W. Hogg\altaffilmark{2,1}}
+\author{Daniela Huppenkothen\altaffilmark{1, 2, 3}, Lucy M. Heil\altaffilmark{4}, David W. Hogg\altaffilmark{2,1}, Andreas Mueller\altaffilmark{1}}
  
   \altaffiltext{1}{Center for Data Science, New York University, 726 Broadway, 7th Floor, New York, NY 10003}
   \altaffiltext{2}{Center for Cosmology and Particle Physics, Department of Physics, New York University, 4 Washington Place, New York, NY 10003, USA}
@@ -213,12 +213,11 @@ Power spectrum PCA & $N$ & Number of components & $3$ & $[1,2,3,5,10,20,50,100]$
 \subsubsection{Free Parameters}
 \label{sec:freeparams}
 
-We estimated free parameters of the model, in particular during the feature extraction stage, using a grid-search cross-validation approach. For a range of reasonable parameters and combinations, we tested performance on a supervised classification task using a Random Forest Classifier and the data with human labels are presented in \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003}. An overview of all free parameters in the classification model is given in \ref{table:parameters}.
+We estimated free parameters of the model, in particular during the feature extraction stage, using the data with human labels are presented in \citet{belloni2000}, \citet{kleinwolt2002} and \citet{hannikainen2003}, and the validation set to test performance. An overview of all free parameters in the classification model is given in \ref{table:parameters}.
 
-In order to estimate which parameters will yield the optimal results, we use supervised learning in the form of Logistic Regression (\citealt{cox1958}; as implemented in \textit{scikit-learn} \citealt{scikit-learn}). Logistic Regression is one of the simplest classification algorithms. It defines a linear model analogously to linear regression, but because outcomes are discrete rather than continuous, it uses a binomial distribution (multinomial distribution if more than two outcomes are possible) instead of a normal distribution in defining the likelihood. In practical terms, logistic regression aims to draw a hyperplane in the $N$-dimensional space spanned by all features such that the hyperplane separates samples belonging to a given class in the training set from the remainder. Multi-class classification is performed either using a multinomial distribution or by using a one-versus-all scheme: for each class in the training set, a separate hyperplane is drawn such that the split between samples belonging to said class and the remaining samples is maximized. We use the the least squares (L2) norm for regularization, which introduces an additional parameter, $C$, for controlling the magnitude of the regularization into the  model. 
+In order to estimate which parameters will yield the optimal results, we use supervised learning in the form of Logistic Regression (\citealt{cox1958}; as implemented in \textit{scikit-learn} \citealt{scikit-learn}). Logistic Regression is one of the simplest classification algorithms. It defines a linear model analogously to linear regression, but because outcomes are discrete rather than continuous, it uses a binomial distribution (multinomial distribution if more than two outcomes are possible) instead of a normal distribution in defining the likelihood. In practical terms, logistic regression aims to draw a hyperplane in the $N$-dimensional space spanned by all features such that the hyperplane separates samples belonging to a given class in the training set from the remainder. Multi-class classification is performed either using a multinomial distribution or by using a one-versus-all scheme: for each class in the training set, a separate hyperplane is drawn such that the split between samples belonging to said class and the remaining samples is maximized. We use the the least squares (L2) norm for regularization, which introduces an additional parameter, $C$, for controlling the magnitude of the regularization into the  model. It is worth noting here that we also attempted the supervised machine learning task with other algorithms that use different strategies for finding decision boundaries between classes, most notably Linear Support Vector Machines (REF) and Random Forests (REF), and found no improved performance with the more complex models compared to the logistic regression classifier, thus we keep the simpler algorithm in the following for its interpretability.
 
-For each combination of parameters listed in Table \ref{tab:parameters}, we use five-fold cross validation on the training set to train the model with these parameters. In cross validation, a part of the data set is held out from the training, and used to test performance of the trained model. In this way, we arrive at the best
-values used for the classification, yielding a total of $34$ features for each of the $8506$ data segments . The features explicitly named above, as well as $10$ weights from the linear model, and $3$ components from performing PCA on the power spectra.
+For each combination of parameters listed in Table \ref{tab:parameters}, we use the training set to train the model with these parameters and compute the accuracy of predictions for the validation set.  Here, the accuracy is defined as the size of the intersection between predicted and true labels (i.e. all labels that were predicted correctly) divided by the size of the union of the two label sets. In this way, we arrive at the best values used for the classification, yielding a total of $34$ features for each of the $8506$ data segments . This comprises the features explicitly named above, as well as $10$ weights from the linear model, and $3$ components from performing PCA on the power spectra.
 
 
 \begin{figure}[htbp]
@@ -232,10 +231,9 @@ values used for the classification, yielding a total of $34$ features for each o
 \subsubsection{Feature Importance}
 
 In order to assess the relative predictive power of each feature, we implemented a greedy search in order to find the most important features in our set. 
-Once more, we used supervised learning with the previously-classified labels and five-fold cross validation on the training set, but computed the average validation score for each feature independently, as if it was the only feature available for classification. We set the feature with the highest validation score as the most important feature, and then perform a second pass, this time using the combination of the winner of the first round with every other feature. Again, we picked the combination with the highest score, and continued this process until all features were exhausted. This procedure answers simultaneously two questions. (1) It provides a ranking for the relative predictive power of each feature, and (2) it provides an assessment whether all features are required to classify the data. The latter need not necessarily be true: some features (e.g. the power colours) are combinations of other features, and thus the combination of all features might not be required.
+Once more, we used supervised learning with the previously-classified labels for the training set, but computed the validation score for each feature independently, as if it was the only feature available for classification. We set the feature with the highest validation score as the most important feature, and then perform a second pass, this time using the combination of the winner of the first round with every other feature. Again, we picked the combination with the highest score, and continued this process until all features were exhausted. This procedure answers simultaneously two questions. (1) It provides a ranking for the relative predictive power of each feature, and (2) it provides an assessment whether all features are required to classify the data. The latter need not necessarily be true: some features (e.g. the power colours) are combinations of other features, and thus the combination of all features might not be required.
 
 In Figure \ref{fig:scores}, we show the result of the greedy search. We find that predictive accuracy is high: $\sim\!\! 97\%$ on the validation set for the the $11$ best features, which provide most of the predictive power. Adding additional features can even decrease the accuracy in the predictions. The most predictive features are dominated by power spectral features: $\mathrm{PC}_1$ and the power in PSD bands  $P_\mathrm{A} = 0.0039-0.031 \,\mathrm{Hz}$ and $P_\mathrm{B} = 0.031-0.25 \,\mathrm{Hz}$ take the top three spots and can together yield a classification accuracy of $91\%$. Additional improvement is provided by the linear model, with five of its ten components represented in the reduced feature set, as well as the frequency at which $\nu P_\nu$ peaks, the kurtosis of both total light curve and hardness ratio $\mathrm{HR}_1$, and finally mean of hardness ratio $\mathrm{HR}_1$. We continue with the rest of the analysis with this reduced set of 11 features.
-
 
 %%%%
 %
@@ -255,13 +253,15 @@ In Figure \ref{fig:scores}, we show the result of the greedy search. We find tha
 
 
 \section{Supervised Classification}
+\label{sec:supervised}
 
-Using the results of the previous sections, we performed supervised classification using Logistic Regression on the GRS 1915+105 data. 
+Using the results of the previous sections, we performed supervised classification using Logistic Regression on the GRS 1915+105 data\footnote{The full set of observations with probabilities for each state can be found at the following address: INSERT LINK}. 
 Overall, with a $90\%$ accuracy on the test set, the classifier performs very well. This is especially true in light of the small size of the data set as well 
 as the heavy imbalance between classes, offering only a few test cases for some of the rarer states. Additionally, the performance of our model is in 
 line with results from other machine learning tasks based on earlier human classification, where human accuracy is often found to be no better than 
 $\sim 90\%$ (NEED TO FIND THE REFERENCE FOR THIS!). An illustration of the classification as a whole is presented in Figure \ref{fig:supervised_pca}, 
-where we show a 2-dimensional representation of our 11-dimensional features space achieved with Principal Component Analysis (PCA).
+where we show a 2-dimensional representation of our 11-dimensional features space achieved with Principal Component Analysis (PCA). 
+
 
 \subsection{Confused Classifications}
 \label{sec:confusion}
@@ -336,41 +336,214 @@ For states that are much less represented in the machine-classified data set com
 machine-classified data set, were the second-most probable state, and compared their probability to that of the state the logistic regression model chose for these specific samples. We find that state $\phi$ comes often second to $\chi$-state observations, which is perhaps not surprising given the morphological similarities between the two states. However, because the hardness ratios are quite different for both states, we find that the logistic regression model assigns these samples to class $\chi$ with a very high degree of confidence (with a $\chi$-state probability of $>0.8$ in $>93\%$ of all samples where $\phi$ has the second-highest probability). This indicates that the paucity of $\phi$-state observations in recent years is likely real. 
 For state $\gamma$, on the other hand, the situation is more complex. We find $\sim 200$ segments classified by our model as $\delta$-state observations, of which $\sim XX\%$ (CALCULATE VALUES) have a comparable probability of being state $\gamma$. This fraction is overall large enough to explain the drop in $\gamma$-state observations between the human- and the machine-classified data set.
 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_transmat.pdf}
+\caption{Transition matrix of states. We used human labels where available, and labels inferred by the logistic regression model trained on the human labels where 
+the latter were unavailable. The matrix presents the probability of arriving in state $x_{t+1}$ given the current state $x_{t}$. The probability is row-wise normalized 
+such that the probabilities to arrive in any new state $j$ from a given state $i$ sum to one: $\sum_{j=1}^{N}p(x_{t+1,j} | x_{t,i}) = 1$. The diagonal indicates transitions into the same state. Dark purple indicates entries in the matrix with value $0$, i.e. there are no observed transitions to this state from the given initial state.} 
+\label{fig:transitionmatrix}
+\end{center}
+\end{figure}
 
 \subsection{Time Evolution of States}
-% NEED PLOT: transition matrix
-% NEED PLOT: Time evolution of the states
 
-% Look at time evolution + transition matrix: 
-% - is there a "connecting" state that the source jumps in and out of?
-% - do certain states always follow each other
-% - are there cycles?
-% Look at overall distribution of states versus training set: are the first four years representative of the long-term evolution?
+While the logistic regression model employed in the classification task does not include any time dependence, it is instructive to put the classified observations 
+into context over the sixteen years of \rxte\ monitoring. In Figure \ref{fig:transitionmatrix}, we show a transition matrix between states. Each row in this matrix 
+represents a probability to pass from initial state $i$ to final state $j$, $p(x_{t+1, j} | x_{t, i})$. The transition matrix was constructed by using the human 
+classified states for observations where these labels exist, and the computer-based classification for all other observations. We then counted transitions from each 
+state $i$ into each other state $j$ for the entire \rxte\ data set, and row-wise normalized such that the probabilities to move into state $j$ from state $i$ sum to one.
+
+Note, however, that there is an important caveat in this procedure: it implicitly assumes continuous observations that are causally connected, that is, the state 
+does not change between one observation and the next. This is not true in practice: \rxte\ observed GRS1915+105 for $\sim 2\,\mathrm{ks}$ per day, leaving most 
+of the day unobserved. Rapid state transitions are possible, thus the transition matrix here can only be seen as an indication of how state transitions might occur 
+in this source. However, a more realistic transition matrix requires more complex (time-dependent) methods that are beyond the scope of this paper.
+
+Overall, it appears that the transition matrix is well-connected: most state transitions are possible, though many occur with a fairly low probability.
+Transitions to the $\chi$-state occur more frequently than most other transition, which is not surprising given that the source spends the majority of its time 
+in this state.Conversely, the probability distribution for leaving the $\chi$-state is fairly flat, indicating that the source is more or less equally likely to go into any 
+of the other states. Another notable exception is the transition from omega to $\chi$ state: it seems that when the source is in the omega state, it preferentially 
+returns to the $\chi$ state before moving elsewhere. 
+
+There are several other transitions that occur with higher probability. For example, when the source is in 
+the $\lambda$ state, it tends to move into the $\kappa$ or $mu$ state next, while on the other hand it is never observed to move into the $\alpha$, $\nu$, 
+$\omega$ or $\phi$ state. This is particularly interesting because transitions into the $\lambda$ state from states $\nu$, $\omega$ and $\phi$ are equally 
+never observed. In principle, unobserved transitions are of as much interest as those that occur frequently, though their interpretation requires caution. 
+
+While the transition matrix is calculated as a set of probabilities, all we can say about the transitions with a probability of $0$ is that they have not been observed 
+during the lifetime of \rxte. This may just as well be due to the lack of continuous observations and the low observational duty cycle as a real physical effects.
+In practice, it is interesting to note that while the transition matrix is overall not symmetric (transitions from state $i$ into state $j$ have a different probability from 
+transitions from state $j$ into state $i$), there are some notable symmetries. In particular, the lack of transitions between states between $\lambda$ as a starting 
+or end point and $\nu$, $\omega$ and $\phi$, but also the lack of transitions between $\phi$ and $\mu$ indicate that perhaps the transition matrix encodes 
+real physical effects that a better model could capture more efficiently.
+
+\begin{figure*}[htbp]
+\begin{center}
+\includegraphics[width=\textwidth]{sgr1915_supervised_phys_features_pca.pdf}
+\caption{PCA representation with the physical labels.} 
+\label{fig:pca_physical}
+\end{center}
+\end{figure*}
 
 
-
+%% Question: Can I make averaged power spectra of *all* segments with a certain class?
 \subsection{Supervised Classification with Physically Motivated Labels}
 
-% Add "physical" classification based on chaotic versus deterministic classification
-% - What does the source spend most of its time in?
-% - Are there certain sequences of states appearing often? Are there certain states always following other states?
-% - What classes do eta and omega most likely belong to?
+The connection between long-term evolution of the patterns observed in GRS 1915+105 and the underlying physical processes of the 
+accrection disc are poorly understood. There is no comprehensive accretion theory that could explain the complex variability observed in the source. 
+Therefore, we are left attempting a comprehensive phenomenological description, as done above. However, there are attempts to connect the set of 
+states with some underlying mechanisms. In particular, \citet{misra2004,2006} and \citet{harikrishnan2011} attempted to connect the observed states to 
+a non-linear, low-dimensional chaotic system. If true, this would have the advantage of allowing a description of the complex magnetohydrodynamics of the 
+accretion disc with a set of ordinary differential equations. They find evidence based on a set of methods optimized for disentangling non-linear dynamics from 
+stochastic systems---correlation dimension, correlation entropy and multi-fractal spectra---that some of the classes in GRS 1915+105 show evidence that nearly 
+half of the twelve states under consideration exhibit deviations from randomness possibly explained by a non-linear chaotic system. Conversely, other states may 
+be well described by stochastic or coloured noise.
+
+In contrast, \citet{polyakov2012} exclusively consider the stochastic components in the light curves using 
+flicker-noise spectroscopy (FNS), with the advantage that they can address one of the major shortcomings in the approach chosen by \citet{misra2004,2006} and 
+\citet{harikrishnan2011}: the presence of Poisson fluctuations, which may contaminate the measures of chaos theory the latter authors use in their analyses.
+They find that thirteen of the fourteen states (state $\omega$ had no known observation with sufficient length to perform the analysis) can be classified into 
+four phenomenological states based on the characteristics of the stochastic contributions to the light curve: random noise, power-scale variability with a $1/f$ type 
+power spectrum, one-scale variability with a single characteristic time scale and two-scale variability with two characteristic time scales. 
+
+In both analysis, while not directly comparable, the fundamental idea is to break down the known states, determined entirely by their patterns in light curves and 
+spectral changes, into classes that relate, at least broadly, to underlying physical processes such as stochastic fluctuations of viscosity in the accretion disc or 
+changes in the mass accretion rate. Both \citet{harikrishnan2011} and \citet{polyakov2012} point out that their analyses have several drawbacks and shortcomings. 
+\citet{harikrishnan2011} does not include either $\eta$ or $\omega$ classes in their analysis, and \citet{polyakov2012} specifically excludes class $\omega$ due to 
+a lack of data. For class $\delta$, \citet{polyakov2012} point out that more data is needed to decide whether the chaotic attractors or stochastic fluctuations 
+provides a more compelling explanation. These cases imply that the initial classification of the first four years did not provide a sufficient amount of data for the 
+different classes. 
+
+Here, we apply the classification scheme derived by \citet{harikrishnan2011} as an example of how we can use the machine learning approach developed above 
+for a somewhat less phenomenological approach to the data set. 
+Following \citet{harikrishnan2011}, we simplify the original labels into three categories: states $\delta$, $\gamma$, $\phi$ and $\chi$ are purely stochastic states
+(``stochastic''), whereas $\kappa$, $\lambda$ and $\mu$ show chaotic behaviour contaminated by coloured noise (``chaotic+coloured''), and states $\beta$, $\theta$, $\alpha$, $\mu$ and $\rho$ correspond to to a system showing signatures of deterministic non-linear behaviour (``chaotic'').
+We also return previously classified examples of states $\omega$ and $\eta$ to the unclassified data set, since we have no a priori knowledge of their affiliation under this scheme.
+
+We then repeat the supervised classification, and find that for the 3-state case, the logistic regression model underperforms compared to more complex decision schemes. In particular, Random Forests provide a much higher performance on the validation set ($98\%$ compared to $94\%$ for the logistic regression model). 
+This is not entirely surprising: logistic regression can only draw very simple (linear) decision boundaries in the high-dimensional parameter space, whereas Random Forests use ensembles of decision trees. Decision trees essentially pose a series of ``if-else'' questions to arrive at a decision for a given sample to belong to a certain class. This allows the decision boundaries between two classes to be much more complex than for the logistic regression model, with the drawback of being much harder to interpret.
+
+ For the case with many classes, we have found that the added complexity of the Random Forests classifier does not lead to an increased accuracy, and conversely the non-linear decision boundaries drawn by a easily lead to over-fitting. In the 3-state classification attempted here, however, we have combined several of the original states into a single new state with a much more complex shape in parameter space (see also Figure \ref{fig:pca_physical}). Therefore, linear decision boundaries result in underfitting, making Random Forests a more appropriate algorithm for classification here. 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_phys_cm.pdf}
+\caption{Confusion matrix for the physical labels. In the left panel, we show the human-classified labels in colours, and the unclassified data in grey. We also 
+explicitly mark the samples of classes $\eta$ and $\omega$, for which we have no labels in this scheme. In the right panel, the fully classified data set.} 
+\label{fig:confusionmatrix_physical}
+\end{center}
+\end{figure}
+
+In Figure \ref{fig:pca_physical}, we show the 2-dimensional PCA representation of the samples both before and after classification. The samples of classes $\eta$ and $\omega$, which have not previously been included in this classification scheme, are explicitly marked in the left-hand panel. 
+With a classification accuracy of $99\%$ on the validation set and $95\%$ on the test set, the Random Forests classifier outperforms any classifier on the 14-label problem discussed above. Figure \ref{fig:fig:confusionmatrix_physical} presents the confusion matrix for the classification with the physically motivated labels.
+Out of $347$ samples in the test set, only $19$ are confused. $17$ of these confusions occur in the ``chaotic+coloured'' state, where $9$ samples are incorrectly 
+classified as ``stochastic'' and $8$ as ``chaotic'', respectively. Given the ambivalent nature of this state, combining properties from both stochastic and chaotic systems, it is expected that this might be the state where confusions occur. The remaining two confused samples split evenly over ``stochastic'' and ``chaotic+coloured'', where ``chaotic'' was the true label.
+
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_phys_transmat.pdf}
+\caption{Transition matrix for the physical labels.} 
+\label{fig:transmat_phys}
+\end{center}
+\end{figure}
+
+The transition matrix (see Figure \ref{fig:transmat_phys}) for this classification problem is well-connected. As with the 14-label classification, the source has the 
+highest probability to remain in the same state, given the previous state. However, it can easily reach any of the other two states given its current state, with fairly 
+similar transition probabilities between $0.0$ and $0.13$. Of course, previously mentioned caveats still apply: this kind of representation cannot capture time-dependent behaviour, and we do not know whether there are any visible patterns in how the source transitions between states. Figure \ref{fig:duration_phys} attempts to capture the fraction of observed time $T_\mathrm{obs}$ that the source spends in each state. This is interesting because in principle, it could tell us about the 
+duty cycle of the various accretion regimes and (MHD) instabilities likely responsible for the source's varied behaviour.
+Since the $\chi$ state in the previous classification with the labels obtained by \citet{belloni2000} is by far the most ubiquitous state, it is unsurprising that more 
+than $50\%$ of the time the source can be found exhibiting stochastic variability. The remaining observations are close to evenly split between ``chaotic'' and 
+``chaotic+coloured'' states, with the latter being slightly more common.
 
 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width=9cm]{grs1915_supervised_phys_states_histogram.pdf}
+\caption{Fraction of observed time $T_{\mathrm{obs}}$ spent in each of the three states. In blue, we show the results from the human classification on the first four 
+years of data. In red, we show the computer-classified data from the later eight years. The source spends the majority of time showing stochastic variability.} 
+\label{fig:duration_phys}
+\end{center}
+\end{figure}
 
-\section{Discussion}
-%% Note: Deliver classification of all observations online somewhere!
+Finally, we also  attempt to infer the properties of the two states without human labels in this scheme---$\eta$ and $\omega$---from the classified labels. 
+In Figure \ref{fig:etaomega_states}, we show the distribution of the samples classified by \citet{kleinwolt2002} as $\omega$ and \citet{hannikainen2004} as $\eta$ 
+in the classification scheme of \citet{harikrishnan2011}. $14$ out of $16$ samples ($87.5\%$) in state $\omega$ are classified as ``stochastic'', indicating that 
+this state is perhaps similar to states $\chi$ and $\gamma$. This echoes our earlier observation that several examples of class $\omega$ were confused for 
+class $\gamma$ in the full 14-state problem. Of course, a precise characterisation of the properties of the light curves in this state is only possible with the 
+methods from non-linear dynamics employed in \citet{harikrishnan2011}. 
 
-\subsection{Caveats and Limits}
-% Caveats
-% - Can only classify previously identified states
-% - Relies on accuracy of human classification as "ground truth"
+The situation is less clear for state $\eta$. Again, most samples are classified as ``stochastic'', but nearly half ($19$ out of $44$) split almost evenly between 
+``chaotic+coloured'' and ``chaotic''. This state shows pulses on a 5-minute time scale, but these pulses are overall much less regular than those 
+seen for example in the $\rho$ state. In principle, this  might argue for a chaotic system driving the processes giving rise to the X-ray emission, perhaps contaminated 
+with stochastic, coloured noise. On the other hand, the hardness ratios are significantly different from all other classes previously observed, one of the reasons why 
+these observations were classified as a new state. Given the importance of the hardness ratios in the classification scheme, this might explain why the 
+Random Forests classifier has trouble identifying these samples with a unique class. This is a general shortcoming in supervised learning: the algorithm will only 
+be trained on what has been seen before; if something uniquely new appears, classification is likely to fail.
 
-\section{Conclusion}
+
+\section{Discussion and Conclusion}
+
+GRS 1915+105 is a remarkable object. It has been in continuous outburst since 1992, showing at least $14$ different states, compared to at most 
+$3$ in other black hole X-ray binaries. \rxte's near-continuous monitoring between 1996 and 2011 has resulted in an unprecedented data set, and the 
+existence of its states as well as a subset of previously-classified data makes it an ideal test case for the use of modern machine learning methods in X-ray astronomy. Here, we classify the entire sixteen-year data set observed with \rxte\ for the first time using a logistic regression model. 
+The results allow researchers to pick specific observations where the source inhabited a certain state from the data set for further analyses, vastly improving 
+the previous situation, where only a third of the data had known states.
+
+The initial classification was done largely visually: the light curves in the $2-60\,\mathrm{keV}$ band show remarkably complex, but repeating patterns that are 
+easily distinguishable by eye. Encoding these patterns in a set of simple features that a machine learning algorithm can use proves both difficult and instructive.
+Many patterns, in particular in states $\theta$, $\lambda$, $\nu$, $\alpha$ and $\beta$ last $\sim 1000\,\mathrm{s}$ or more, comparable to the duration of most 
+uninterrupted data segments. In most data sets, we see at most one cycle of the pattern, or perhaps only a fragment of it. A Fourier representation of the data are 
+therefore of limited use here: because of the short duration, it cannot capture the pattern of harmonics generated by the non-sinusoidal nature of the signal. At 
+most, we will be able to capture differences between states at higher frequencies, such as the presence or absence of QPOs. This, however, does not allow us to 
+uniquely distinguish the patterns that are so striking to the naked eye. 
+
+At the same time, each observation in a given state will start at a random phase of the pattern. This immediately makes it impossible to use the light curves directly 
+in the machine learning algorithm, since the latter is sensitive to phase shifts, thus two light curves of the same state, but shifted in phase appear far 
+from each other in feature space. Despite these caveats, our feature engineering in Section \ref{sec:featureselection} has shown that 
+the most predictive features are power spectral representations of the data, allowing for a validation accuracy of over $90\%$ alone. This indicates that a better 
+model of the variability might improve the classification further. In contrast, features based on the two hardness ratios had only a minor effect, and only HR1 proved 
+to have a measurable effect on the classification accuracy. In the era of spectral timing, it might be of interest to explore features that tie time and energy closer 
+together, such as time lags, covariance spectra and coherence.
+
+There are various strategies that might be successful at improving the features encoding variability. One may use much shorter segments than we have done here, 
+which will not encode the full pattern, but parts of it that may be shared across states. For example, the long intervals with a low count rate and low variance in state 
+$\alpha$ might be shared with state $\chi$, while the pulses in the same state might be more similar to state $\rho$. The patterns we see would then be repeatable 
+cycles of these micro-states. This type of model requires a more complex representation, out of the scope of this current work. 
+
+Another strategy is to learn the features from the data itself. This has been a popular approach in a branch of machine learning called ``deep learning'', but generally 
+requires vast training data sets with millions of samples. It is unclear how well a deep neural network would be able to learn the structure of the data set from only 
+$\sim 8000$ light curves. Alternatively, \textit{autoencoders}, neural networks aimed at learning representations of data, have been used successfully for encoding 
+human speech signals for the purpose of both speech recognition and reconstruction [REF]. Speech is similar to the data observed in GRS 1915+105 in the sense 
+that it includes information on vastly different time scales, all of which are important for recognizing the correct word, or in this case, state. These methods can 
+potentially provide powerful encodings of black hole signals beyond GRS 1915+105 and will be explored in future work. 
+
+Another limitation in the approach chosen here arises from the inherent assumption in supervised classification that the examples in the training set are representative of the unclassified data, that is, that there are no additional, unrecognized states in the data. If there are states that have so far not been 
+recognized in the previously unclassified data set, then the algorithm cannot find them. Unsupervised machine learning methods, which do not make 
+use of the human-supplied labels, would be more suitable for this task. A class of models called Hidden Markov Models (HMMs) is one such model which also 
+allows for an explicit encoding of the time dependence of the observations. It thus makes it possible to find other states not previously observed, and also infer 
+the state the source likely occupied while \rxte\ did not observe it. This is necessary for an accurate inference of the transition matrix, which is limited by the 
+low duty cycle of on-target time. Models of this type will be the subject of future work, too.
+
+Finally, it must be mentioned that \rxte\ no longer operates. Another potentially useful avenue of work might be to use transfer learning methods, which allow 
+for inference on data sets with a warped feature space compared to the original training data. This is of particular use given the existence of different telescopes 
+observing this source, which have different sensitivities and energy ranges and will thus create a feature space that is similar to that created with \rxte\ data, but 
+not identical.
+
+The exact processes and parameters steering the long-term evolution of GRS 1915+105 are currently unknown. While much attention has focused on 
+individual states, in particular the $\rho$ state with its very regular patterns, the long-term evolution of the source, which states it spends its time in and how 
+it switches between states has defied explanation. Likely, the observed patterns are due to a complex interdependence between MHD processes in the accretion 
+disc and the emission processes producing the observed X-rays. Here, we do not attempt to provide an explanation of the long-term evolution, but instead show 
+new ways in which the existing data can be used to derive knowledge about the phenomenology of the source. 
+
+\citet{belloni2000} themselves point out that their classification was meant as a phenomenological description only. On the other hand, the observed patterns 
+must be tied to the underlying physical processes, in particular the mass accretion rate, thus understanding which states the source spent its time in over the 
+past $16$ years plays an important role in understanding how the accretion disc reacts to global changes. Here, we chose a specific model (``stochastic'' versus 
+``chaotic'' processes) to highlight the connection of the long-term evolution to real, physical processes in the accretion disc. The idea that the underlying driving 
+mechanism could be a chaotic, non-linear dynamical system is an attractive one, because it reduces the complex problem of magnetohydrodynamics in an 
+accretion disc to a system of ordinary differential equations, whereby changes in the disc are driven by changes in global properties such as viscosity or mass 
+accretion rate. At the moment, no global models of the long-term evolution of GRS 1915+105 exist. However, the feature engineering and classification performed in this paper are a first step toward providing the data products that make a comparison between models and data possible.
 
 \paragraph{acknowledgements}
-
-\bibliographystyle{apj}
+DH acknowledges support by the Moore-Sloan Data Science Environment at NYU.\bibliographystyle{apj}. The authors thank Brian McFee for many useful conversations.
 \bibliography{grs1915_classification_paper}
 
 \end{document}
