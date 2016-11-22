@@ -54,7 +54,6 @@ def combine_lightcurves(obsids, datadir="./"):
     :param datadir: directory with the data
     :return: saves file to disk
     """
-    #print("Running through %i ObsIDs ..."%len(obsids))
 
     hdulist = fits.open(datadir+"GRS1915+105.fits")
     h = hdulist[1]
@@ -66,20 +65,14 @@ def combine_lightcurves(obsids, datadir="./"):
     exposure = d["EXPOSURE"]
 
     for i,o in enumerate(obsids):
-        #print("i = " + str(i))
-        #print("I am on ObsID " + str(o))
         fobs = glob.glob(datadir+"*%s*.fits"%o)
-        #print('len(fobs): ' + str(len(fobs)))
-        #print("fobs: " + str(fobs))
         emin_all, emax_all = [], []
         for f in fobs:
             fsplit = f.split("_")
             obsid = fsplit[1]
             ebands = fsplit[3].split("-")
             emin_all.append(np.float(ebands[0]))
-            #print("emin_all: " + str(emin_all))
             emax_all.append(np.float(ebands[1][:-3]))
-            #print("emax_all: " + str(emax_all))
             time_res = fsplit[4].split("div")
             tres = np.float(time_res[0])/np.float(time_res[1][:-1])
 
@@ -88,8 +81,6 @@ def combine_lightcurves(obsids, datadir="./"):
 
         emin_all = np.array(emin_all)
         emax_all = np.array(emax_all)
-        #print("emin_all: " + str(emin_all))
-        #print("emax_all: " + str(emax_all))
 
         ### below, you can find totally stupid code, with the energy ranges for the
         ### RXTE data of GRS 1915+105 as made by Lucy, because the energy ranges are not
@@ -97,40 +88,23 @@ def combine_lightcurves(obsids, datadir="./"):
         ### so I need to some complicated statements to figure out which is low, mid and high band.
 
         total_band_ind = np.where((emin_all < 6.2) & (emax_all > 10.))[0]
-        #total_band_ind = np.where((emin_all == np.min(emin_all)) & (emax_all == np.max(emax_all)))[0]
         if len(total_band_ind) > 1:
             total_band_ind = total_band_ind[0]
 
-        #print("total_band_ind: " + str(total_band_ind))
-        #print("total band file: " + str(fobs[total_band_ind]))
-
-        #low_band_ind = np.where((emin_all == np.min(emin_all)) & (emax_all == np.min(emax_all)))[0]
         low_band_ind = np.where((emin_all < 6.2) & (emax_all < 10.))[0]
-        #print("low_band_ind: " + str(low_band_ind))
-        #print("low band file: " + str(fobs[low_band_ind]))
 
-        #high_band_ind = np.where((emin_all == np.max(emin_all)) & (emax_all == np.max(emax_all)))[0]
         mid_band_ind = np.where((emin_all > 6.2) & (emin_all < 10.0) & (emax_all >10.) & (emax_all < 25.0))[0]
         if len(mid_band_ind) > 1:
             mid_band_ind = mid_band_ind[0]
-        #print("mid_band_ind: " + str(mid_band_ind))
-        #print("mid band file: " + str(fobs[mid_band_ind]))
 
         high_band_ind1 = np.where((emin_all > 10.) & (emax_all > 12.) & (emax_all < 20.0))[0]
         if len(high_band_ind1) == 0:
             high_band_ind1 = None
-        #else:
-        #    print("high_band_ind1: " + str(high_band_ind1))
-        #    print("high band file 1: " + str(fobs[high_band_ind1]))
 
         high_band_ind2 = np.where((emin_all > 13.0) & (emax_all > 50.))[0]
         if len(high_band_ind2) == 0:
             print("No high_band_ind2")
             continue
-        #else:
-        #    print("high_band_ind2: " + str(high_band_ind2))
-        #    print("high band file 2: " + str(fobs[high_band_ind2]))
-
 
         mlf_ind = np.where(obsid == d["OBSID"])[0]
         print("index of ObsID file: " + str(mlf_ind))
@@ -142,7 +116,6 @@ def combine_lightcurves(obsids, datadir="./"):
 
         total_data = fits.open(fobs[total_band_ind])
         total_times, total_counts = total_data[1].data.field(0), total_data[1].data.field(1)
-        #print("len(total_times): " + str(len(total_times)))
         gti_start = total_data[2].data.field(0)[0]
 
         total_times += start_time + gti_start
@@ -154,7 +127,6 @@ def combine_lightcurves(obsids, datadir="./"):
         low_times, low_counts = low_data[1].data.field(0), low_data[1].data.field(1)
         low_times += start_time + gti_start
 
-        #print("len(low_times): " + str(len(low_times)))
         dt_low = np.min(low_times[1:] - low_times[:-1])
         nbins_low= len(low_times)
 
@@ -163,44 +135,24 @@ def combine_lightcurves(obsids, datadir="./"):
         mid_times, mid_counts = mid_data[1].data.field(0), mid_data[1].data.field(1)
         mid_times += start_time + gti_start
 
-        #print("len(mid_times): " + str(len(mid_times)))
         dt_mid = np.min(mid_times[1:] - mid_times[:-1])
         nbins_mid = len(mid_times)
-
-        #if high_band_ind1 is None:
-        #    print("I am here")
-        #    high_data = fits.open(fobs[high_band_ind2])
-        #    high_times, high_counts = high_data[1].data.field(0), high_data[1].data.field(1)
-
-        #else:
-        #    print("Combining data")
-        #    high_times, high_counts = combine_high_data(fobs[high_band_ind1], fobs[high_band_ind2])
 
         high_data = fits.open(fobs[high_band_ind2])
         high_times, high_counts = high_data[1].data.field(0), high_data[1].data.field(1)
         high_times += start_time + gti_start
 
-        #print("len(high_times): " + str(len(high_times)))
         dt_high = np.min(high_times[1:] - high_times[:-1])
         nbins_high = len(high_times)
 
         if not nbins_total == nbins_low == nbins_mid == nbins_high:
-            #dt = np.max([dt_total, dt_low, dt_mid, dt_high])
             nbins = np.min([nbins_total, nbins_low, nbins_mid, nbins_high])
-            #print("nbins: " + str(nbins))
             total_times, total_counts = equalize_resolution(total_times, total_counts, nbins)
             low_times, low_counts = equalize_resolution(low_times, low_counts, nbins)
             mid_times, mid_counts = equalize_resolution(mid_times, mid_counts, nbins)
             high_times, high_counts = equalize_resolution(high_times, high_counts, nbins)
 
-        #print("len(total_times): " + str(len(total_times)))
-        #print("len(low_times): " + str(len(low_times)))
-        #print("len(mid_times): " + str(len(mid_times)))
-        #print("len(high_times): " + str(len(high_times)))
-
-
         data = np.transpose(np.array([total_times, total_counts, low_counts, mid_counts, high_counts]))
-        #print("data.shape: " + str(data.shape))
 
         np.savetxt(datadir+"LC_%s_combined.dat"%o,data,
                     header = "Times \t total counts \t low band counts \t mid band counts \t high band counts\n")
@@ -216,7 +168,6 @@ def combine_lightcurves(obsids, datadir="./"):
 
 def bin_lightcurve(dtemp, nbins):
     tbinned_times, tbinned_counts = gt.rebin_lightcurve(dtemp[:,0], dtemp[:,1], n=nbins, type="average")
-    #print("dt: " + str(tbinned_times[1]-tbinned_times[0]))
     lbinned_times, lbinned_counts = gt.rebin_lightcurve(dtemp[:,0], dtemp[:,2], n=nbins, type="average")
     mbinned_times, mbinned_counts = gt.rebin_lightcurve(dtemp[:,0], dtemp[:,3], n=nbins, type="average")
     hbinned_times, hbinned_counts = gt.rebin_lightcurve(dtemp[:,0], dtemp[:,4], n=nbins, type="average")
@@ -247,7 +198,6 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
 
     d_all = []
     for f in files:
-        #print("I am on file " + str(f))
         fstring = f.split("_")[1]
         if fstring in belloni_turned:
             state = belloni_turned[fstring]
@@ -257,18 +207,9 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
                 continue
 
         d = np.loadtxt(f)
-        #times = d[:,0]
-        #counts = d[:,1]
-        #plt.plot(times, counts)
         dt_data = d[1:,0]-d[:-1,0]
 
         dt_min = np.min(dt_data)
-
-        #print("dt_min: " + str(dt_min))
-        #nseg = int(tseg/dt_min) ## number of bins per segment
-        #noverlap = int(overlap_time/dt_min)
-        #print("nseg: " + str(nseg))
-        #print("noverlap: " + str(noverlap))
 
         ## compute nbins, if nbins is <=1, don't bin
         ## because target resolution is smaller than
@@ -277,58 +218,45 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
         if nbins <= 1:
             print("Target resolution smaller than native time resolution. Not binning!")
             bin_data=False
-        #print("bin_res: " + str(bin_res))
-        #print("dt_min: " + str(dt_min))
-        #print("nbins: " + str(nbins))
 
         ### split data with breaks
         breaks = np.where(dt_data > 0.008)[0]
-        #print(breaks)
         if len(breaks) == 0:
             dtemp = d
             if bin_data:
-                #nbins = int(bin_res/tres)
                 dshort = bin_lightcurve(dtemp, nbins)
             else:
                 dshort = dtemp
-            d_all.append([dshort, state])
+            d_all.append([dshort, state, fstring])
         else:
             for i,b in enumerate(breaks):
-                #print("Break in light curve at time bin %i; length of break dt = %.3f"%(b, dt_data[b]))
                 if i == 0:
                     if b == 0:
-                        #print("First break is at first time bin")
                         continue
                     else:
-                        #print("I am extracting the data before the break")
                         dtemp = d[:b]
                         if bin_data:
-                            #nbins = int(bin_res/tres)
                             dshort = bin_lightcurve(dtemp, nbins)
                         else:
                             dshort = dtemp
 
                 else:
-                    #print("I am extracting data after break " + str(i))
                     dtemp = d[breaks[i-1]+1:b]
                     if bin_data:
-                        #nbins = int(bin_res/tres)
                         dshort = bin_lightcurve(dtemp, nbins)
                     else:
                         dshort = dtemp
 
-                d_all.append([dshort, state])
+                d_all.append([dshort, state, fstring])
 
             ## last segment
-            #print("I am computing last segment of file")
             dtemp = d[b+1:]
             if bin_data:
-                #nbins = int(bin_res/tres)
                 dshort = bin_lightcurve(dtemp, nbins)
             else:
                 dshort = dtemp
 
-            d_all.append([dshort, state])
+            d_all.append([dshort, state, fstring])
 
     return d_all
 
@@ -341,19 +269,18 @@ def remove_zeros(d):
     """
     data = d[0]
     labels = d[1]
+    obsid = d[2]
 
     max_all = []
     for m in [np.where(d[0][:,1] <= 0.0)[0], np.where(d[0][:,2] <= 0.0)[0],  np.where(d[0][:,3] <= 0.0)[0]]:
         if len(m) > 0:
             max_all.extend(m)
-    #print(max_all)
     if len(max_all) == 0:
         return[data, labels]
     else:
         max_zero = np.max(max_all)
-        #print('max_zero: ' + str(max_zero))
         data = data[max_zero:]
-        return [data, labels]
+        return [data, labels, obsid]
 
 
 def remove_nans(d_all):
@@ -364,9 +291,6 @@ def remove_nans(d_all):
         zero_counts = np.where(d[0][:,1] <= 0.0)[0]
         zero_hr1 =  np.where(d[0][:,2] <= 0.0)[0]
         zero_hr2 =  np.where(d[0][:,3] <= 0.0)[0]
-        #print(zero_counts)
-        #print(zero_hr1)
-        #print(zero_hr2)
         if len(zero_counts) > 0 or len(zero_hr1) > 0 or len(zero_hr2) > 0:
             print("Found some zeros in light curve %i. Removing ..."%i)
             d_new = remove_zeros(d)
@@ -389,7 +313,7 @@ def add_total_countrate(d_all):
     for data in d_all:
        lcs = data[0]
        lcs[:,1] = lcs[:,1] + lcs[:,-1]
-       d_all_new.append([lcs, data[1]])
+       d_all_new.append([lcs, data[1], data[2]])
    
     return d_all_new
 
@@ -407,7 +331,6 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
     ## make a list of all ObsIDs
     files = glob.glob(datadir+"LC*.fits")
     obsids = [f.split("_")[1] for f in files]
-    #print("Total number of files: " + str(len(obsids)))
     obsids = set(obsids)
     print("Total number of ObsIDs: " + str(len(obsids)))
 
