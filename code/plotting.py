@@ -135,7 +135,8 @@ def confusion_matrix(labels_true, labels_pred, classes, log=False, normalize=Fal
         fig, ax = plt.subplots(1,1,figsize=(9,6))
 
     unique_labels = np.unique(labels_true)
-    confmatrix = sklearn.metrics.confusion_matrix(labels_true, labels_pred, labels=unique_labels)
+    confmatrix = sklearn.metrics.confusion_matrix(labels_true, labels_pred,
+                                                  labels=unique_labels)
 
     if log:
         confmatrix = np.log10(confmatrix)

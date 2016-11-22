@@ -98,7 +98,7 @@ def features_pca(fscaled, labels, axes=None,
     ax1, ax2 = axes[0], axes[1]
 
     labels_all = np.hstack([labels["train"], labels["val"], labels["test"]])
-    
+
     ax1 = plotting.scatter(fscaled_trans, labels_all, ax=ax1)
 
     # second panel: physical labels:
@@ -427,7 +427,7 @@ def all_figures():
 
     # First the comparison between Belloni classification + other classification
     # using PCA
-    ax1, ax2 = features_pca(fscaled_full, labels_all, axes=None,
+    ax1, ax2 = features_pca(fscaled_full, labels, axes=None,
                             alpha=0.8, palette="Set3", algorithm="pca")
 
     ax2.set_ylabel("")
@@ -435,14 +435,15 @@ def all_figures():
     plt.savefig(datadir+"grs1915_features_pca.pdf", format="pdf")
     plt.close()
 
-    # Same as before, using t-SNE
-    ax1, ax2 = features_pca(fscaled_full, labels_all, axes=None,
-                            alpha=0.8, palette="Set3", algorithm="tsne")
+    if tsne:
+        # Same as before, using t-SNE
+        ax1, ax2 = features_pca(fscaled_full, labels, axes=None,
+                                alpha=0.8, palette="Set3", algorithm="tsne")
 
-    ax2.set_ylabel("")
-    plt.tight_layout()
-    plt.savefig(datadir+"grs1915_features_tsne.pdf", format="pdf")
-    plt.close()
+        ax2.set_ylabel("")
+        plt.tight_layout()
+        plt.savefig(datadir+"grs1915_features_tsne.pdf", format="pdf")
+        plt.close()
 
     # get classified features + labels
     supervised_validation(fscaled, fscaled_lb, labels, labels_lb, lc_lb,

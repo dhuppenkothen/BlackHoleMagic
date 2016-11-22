@@ -129,8 +129,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64., dt=0.125):
         data = d_seg[0]
         ## state is a string in the second element of d_seg
         state = d_seg[1]
-        ## obsid
-        obs = d_seg[2]
+        oid = d_seg[2]
 
         ## if the length of the light curve is shorter than the
         ## chosen segment length, discard this light curve
@@ -155,6 +154,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64., dt=0.125):
             dtemp = data[istart:iend]
             segments.append(dtemp)
             labels.append(state)
+            obsids.append(oid)
             istart += noverlap
             iend += noverlap
 
@@ -236,8 +236,6 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
         if val:
             seg_val, labels_val, nseg_val, obsids_val = extract_segments(d_all_val, seg_length=seg_length, 
                                                              overlap=overlap, dt=dt)
-
-
     else:
         seg_train = [d[0] for d in d_all_train]
         labels_train = [d[1] for d in d_all_train]
@@ -247,7 +245,7 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
         seg_test = [d[0] for d in d_all_test]
         labels_test = [d[1] for d in d_all_test]
         nseg_test = [1 for d in d_all_test]
-        obdsids_test = [d[2] for d in d_all_test]
+        obsids_test = [d[2] for d in d_all_test]
 
         if val:
             seg_val = [d[0] for d in d_all_val]
@@ -875,7 +873,6 @@ def make_all_features(d_all, k=10, lamb=0.1, n=1, n_components=1,
     features_train["obsids"] = obsids_train
     features_test["obsids"] = obsids_test
 
-
     ## check for NaN
     print("Checking for NaN in the training set ...")
     print("%i samples in training data set before checking for NaNs."%features_train["features"].shape[0])
@@ -915,6 +912,9 @@ def make_all_features(d_all, k=10, lamb=0.1, n=1, n_components=1,
 
         np.savetxt(froot+"_%is_tstart_train.txt"%int(seg_length), features_train_checked["tstart"])
         np.savetxt(froot+"_%is_tstart_test.txt"%int(seg_length), features_test_checked["tstart"])
+
+        np.savetxt(froot+"_%is_obsids_train.txt"int(seg_length), features_train_checked["obsids"])
+        np.savetxt(froot+"_%is_obsids_test.txt"%int(seg_length), features_test_checked["obsids"])
 
         ltrainfile = open(froot+"_%is_labels_train.txt"%int(seg_length), "w")
         for l in labels_train_checked:

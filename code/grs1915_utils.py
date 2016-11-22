@@ -207,8 +207,6 @@ def state_time_evolution(times, labels, namestr="test", datadir="./"):
         end_time += plot_len
         i+=1
 
-
-
     ### HORRIBLY COMPLICATED WAY TO MAKE THE LEGEND
     lines = []
 

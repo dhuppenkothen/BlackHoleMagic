@@ -319,7 +319,7 @@ def add_total_countrate(d_all):
 
 
 
-def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125):
+def extract_all_segments(label_only=False, clean="clean", datadir="./", bin_data=True, bin_res=0.125):
     """
     Do the entire data extraction and save in a pickle file.
     :param clean:
@@ -339,7 +339,7 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
 
     ### find all newly combined data files and extract the segments
     files = glob.glob(datadir+"*combined.dat")
-    d_all = extract_obsmode_data(files, bin_data=True, bin_res=bin_res, label_only=clean, labels="clean")
+    d_all = extract_obsmode_data(files, bin_data=True, bin_res=bin_res, label_only=label_only, labels=clean)
 
     d_all_new = remove_nans(d_all)
     d_all_new = add_total_countrate(d_all_new)
