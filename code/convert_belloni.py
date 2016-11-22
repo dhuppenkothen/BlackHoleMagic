@@ -2,6 +2,21 @@ import numpy as np
 import cPickle as pickle
 
 def convert_obsids(states):
+    """
+    Convert the ObsIDs from the Belloni paper, which contain letters,
+    to actual RXTE OBsIDs.
+
+    Parameters
+    ----------
+    states : iterable
+        A list of ObsIDs
+
+    Returns
+    -------
+    states_new : iterable
+        A list with the full ObsIDs without abbreviations
+    """
+
     i = "10408-01"
     j = "20187-02"
     k = "20402-01"
@@ -19,6 +34,29 @@ def convert_obsids(states):
 
 
 def convert_belloni_clean(turned=True):
+    """
+    I have two files: one with the full set of classifications, and 
+    one with *only* the classifications from Belloni et al (2000) and 
+    Klein-Wolt et al (2002) where the full observation was covered by a 
+    *single* state, i.e. this excludes observations that were annotated, 
+    but where the source's state changed throughout the observation.
+    This function returns a "clean" sample so that I can classify without 
+    having to worry about mis-attributions because the source switched 
+    state.
+
+    Note: the file has *one* line per GRS 1915+105 source state, with a 
+    list of observations in that state following the state descriptor.
+    
+    Parameters
+    ----------
+    turned : bool
+       Turn dictionary from {"state":[ObsIDs]} to {"ObsID":state} ?
+
+    Returns
+    -------
+    belloni_clean : dict
+        A dictionary with the ObsIDs and corresponding states.
+    """
     ## cleaned version; without observations that have light curves
     ## with more than one class
     file = open("1915Belloniclass_updated.dat")
@@ -36,6 +74,10 @@ def convert_belloni_clean(turned=True):
     
 ## turn around conversion (just in case):
 def turn_states(states, remove_dashes = False):
+    """
+    Turn the state dictionary from the form {"state":[ObsIDs]} 
+    to the form {"ObsID": state}
+    """
     turned_states = {}
     for k,lis in states.iteritems():
         for l in lis:
