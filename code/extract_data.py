@@ -239,10 +239,11 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
     """
 
     if labels == "clean":
+        belloni_turned = convert_belloni.convert_belloni_clean()
+    else:
         belloni_states = convert_belloni.main()
         belloni_turned = convert_belloni.turn_states(belloni_states)
-    else:
-        belloni_turned = convert_belloni.convert_belloni_clean()
+
 
     d_all = []
     for f in files:
@@ -290,7 +291,7 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
                 dshort = bin_lightcurve(dtemp, nbins)
             else:
                 dshort = dtemp
-            d_all.append([dshort, state])
+            d_all.append([dshort, state, fstring])
         else:
             for i,b in enumerate(breaks):
                 #print("Break in light curve at time bin %i; length of break dt = %.3f"%(b, dt_data[b]))
@@ -316,7 +317,7 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
                     else:
                         dshort = dtemp
 
-                d_all.append([dshort, state])
+                d_all.append([dshort, state, fstring])
 
             ## last segment
             #print("I am computing last segment of file")
@@ -327,7 +328,7 @@ def extract_obsmode_data(files, bin_data=True, bin_res=0.125, label_only=False, 
             else:
                 dshort = dtemp
 
-            d_all.append([dshort, state])
+            d_all.append([dshort, state, fstring])
 
     return d_all
 
@@ -340,6 +341,7 @@ def remove_zeros(d):
     """
     data = d[0]
     labels = d[1]
+    obsid = d[2]
 
     max_all = []
     for m in [np.where(d[0][:,1] <= 0.0)[0], np.where(d[0][:,2] <= 0.0)[0],  np.where(d[0][:,3] <= 0.0)[0]]:
@@ -352,7 +354,7 @@ def remove_zeros(d):
         max_zero = np.max(max_all)
         #print('max_zero: ' + str(max_zero))
         data = data[max_zero:]
-        return [data, labels]
+        return [data, labels, obsid]
 
 
 def remove_nans(d_all):
@@ -363,9 +365,7 @@ def remove_nans(d_all):
         zero_counts = np.where(d[0][:,1] <= 0.0)[0]
         zero_hr1 =  np.where(d[0][:,2] <= 0.0)[0]
         zero_hr2 =  np.where(d[0][:,3] <= 0.0)[0]
-        #print(zero_counts)
-        #print(zero_hr1)
-        #print(zero_hr2)
+        
         if len(zero_counts) > 0 or len(zero_hr1) > 0 or len(zero_hr2) > 0:
             print("Found some zeros in light curve %i. Removing ..."%i)
             d_new = remove_zeros(d)
@@ -388,13 +388,13 @@ def add_total_countrate(d_all):
     for data in d_all:
        lcs = data[0]
        lcs[:,1] = lcs[:,1] + lcs[:,-1]
-       d_all_new.append([lcs, data[1]])
+       d_all_new.append([lcs, data[1], data[2]])
    
     return d_all_new
 
 
 
-def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125):
+def extract_all_segments(label_only=False, clean="clean", datadir="./", bin_data=True, bin_res=0.125):
     """
     Do the entire data extraction and save in a pickle file.
     :param clean:
@@ -415,7 +415,7 @@ def extract_all_segments(clean=True, datadir="./", bin_data=True, bin_res=0.125)
 
     ### find all newly combined data files and extract the segments
     files = glob.glob(datadir+"*combined.dat")
-    d_all = extract_obsmode_data(files, bin_data=True, bin_res=bin_res, label_only=clean, labels="clean")
+    d_all = extract_obsmode_data(files, bin_data=True, bin_res=bin_res, label_only=label_only, labels=clean)
 
     d_all_new = remove_nans(d_all)
     d_all_new = add_total_countrate(d_all_new)
