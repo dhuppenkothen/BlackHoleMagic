@@ -65,7 +65,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         i.e. by default light curves start 64 seconds apart. The actual overlap is
         seg_length-overlap
     """
-    segments, labels, nsegments = [], [], [] ## labels for labelled data
+    segments, labels, nsegments, obsids = [], [], [], [] ## labels for labelled data
 
     for i,d_seg in enumerate(d_all):
 
@@ -73,6 +73,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         data = d_seg[0]
         ## state is a string in the second element of d_seg
         state = d_seg[1]
+        oid = d_seg[2]
 
         ## if the length of the light curve is shorter than the
         ## chosen segment length, discard this light curve
@@ -98,6 +99,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
             dtemp = data[istart:iend]
             segments.append(dtemp)
             labels.append(state)
+            obsids.append(oid)
             istart += noverlap
             iend += noverlap
             j+=1
@@ -108,7 +110,7 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
     ## combination of None objects and strings
     labels = np.array([str(l) for l in labels])
 
-    return segments, labels, np.array(nsegments)
+    return segments, labels, np.array(nsegments), np.array(obsids)
 
 def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_frac = 0.25,
                   seg=True, seg_length=1024., overlap = 128.):
@@ -130,27 +132,29 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
         d_all_train  = d_all_train + d_all_val
 
     if seg:
-        seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
-        seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
+        seg_train, labels_train, nseg_train, obsids_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
+        seg_test, labels_test, nseg_test, obsids_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
 
         if val:
-            seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
+            seg_val, labels_val, nseg_val, obsids_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
 
 
     else:
         seg_train = [d[0] for d in d_all_train]
         labels_train = [d[1] for d in d_all_train]
         nseg_train = [1 for d in d_all_train]
+        obsids_train = [d[2] for d in d_all_train]
 
         seg_test = [d[0] for d in d_all_test]
         labels_test = [d[1] for d in d_all_test]
         nseg_test = [1 for d in d_all_test]
+        obsids_test = [d[2] for d in d_all_test]
 
         if val:
             seg_val = [d[0] for d in d_all_val]
             labels_val = [d[1] for d in d_all_val]
             nseg_val = [1 for d in d_all_val]
-
+            obsids_val = [d[2] for d in d_all_val]
 
         ## Let's print some details on the different segment data sets
         print("There are %i segments in the training set."%len(seg_train))
@@ -171,12 +175,12 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
             print("================================================================")
 
     if val:
-        return [[seg_train, labels_train, nseg_train],
-                [seg_val, labels_val, nseg_val],
-                [seg_test, labels_test, nseg_test]]
+        return [[seg_train, labels_train, nseg_train, obsids_train],
+                [seg_val, labels_val, nseg_val, obsids_train],
+                [seg_test, labels_test, nseg_test, obsids_train]]
     else:
-        return [[seg_train, labels_train, nseg_train],
-                [seg_test, labels_test, nseg_test]]
+        return [[seg_train, labels_train, nseg_train, obsids_train],
+                [seg_test, labels_test, nseg_test, obsids_train]]
 
 ######################################################################################################################
 #### FUNCTIONS FOR FEATURE EXTRACTION ################################################################################
@@ -592,7 +596,7 @@ def make_features(seg, k=10, bins=30, lamb=None,
 
 def check_nan(features, labels, hr=True, lc=True):
     inf_ind = []
-    fnew, lnew, tnew = [], [], []
+    fnew, lnew, tnew, onew = [], [], [], []
 
     nseg = features["nseg"]
     nsum = np.array([np.sum(nseg[:i])-1 for i in xrange(1, len(nseg)+1)])
@@ -618,6 +622,7 @@ def check_nan(features, labels, hr=True, lc=True):
                 fnew.append(f)
                 lnew.append(labels[i])
                 tnew.append(features["tstart"][i])
+                onew.append(features["obsids"][i])
                 if lc:
                     lcnew.append(features["lc"][i])
                 if hr:
@@ -626,7 +631,7 @@ def check_nan(features, labels, hr=True, lc=True):
             print("f: " + str(f))
             print("type(f): " + str(type(f)))
             raise Exception("This is breaking! Boo!")
-    features_new = {"features":fnew, "tstart":tnew, "nseg":nseg}
+    features_new = {"features":fnew, "tstart":tnew, "nseg":nseg, "obsids":onew}
     if lc:
         features_new["lc"] = lcnew
     if hr:
@@ -654,9 +659,9 @@ def make_all_features(d_all, k=10, lamb=0.1,
     d_all_train = d_all[:int(train_frac*n_lcs)]
     d_all_test = d_all[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]
 
-    seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length,
+    seg_train, labels_train, nseg_train, obsids_train = extract_segments(d_all_train, seg_length=seg_length,
                                                            overlap=overlap)
-    seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length,
+    seg_test, labels_test, nseg_test, obsids_test = extract_segments(d_all_test, seg_length=seg_length,
                                                         overlap=overlap)
 
     tstart_train = np.array([s[0,0] for s in seg_train])
@@ -665,7 +670,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     if val:
         d_all_val = d_all[int((train_frac + test_frac)*n_lcs):]
-        seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length,
+        seg_val, labels_val, nseg_val, obsids_val = extract_segments(d_all_val, seg_length=seg_length,
                                                          overlap=overlap)
         tstart_val = np.array([s[0,0] for s in seg_val])
 
@@ -685,8 +690,9 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     features_train["nseg"] = nseg_train
     features_test["nseg"] = nseg_test
-    #features_train = np.concatenate((tstart_train, features_train))
-    #features_test = np.concatenate((tstart_test, features_test))
+
+    features_train["obsids"] = obsids_train
+    features_test["obsids"] = obsids_test
 
     print("len(tstart_test): " + str(len(tstart_test)))
     print("len(features_test): " + str(len(features_test)))
@@ -709,6 +715,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
         #features_val = np.concatenate((tstart_val, features_val))
         features_val["tstart"] = tstart_val
         features_val["nseg"] = nseg_val
+        features_val["obsids"] = obsids_val
 
         features_val_checked, labels_val_checked = check_nan(features_val, labels_val, hr=hr, lc=lc)
 
@@ -725,6 +732,9 @@ def make_all_features(d_all, k=10, lamb=0.1,
         np.savetxt(froot+"_%is_tstart_train.txt"%int(seg_length), features_train_checked["tstart"])
         np.savetxt(froot+"_%is_tstart_test.txt"%int(seg_length), features_test_checked["tstart"])
 
+        np.savetxt(froot+"_%is_obsids_train.txt"int(seg_length), features_train_checked["obsids"])
+        np.savetxt(froot+"_%is_obsids_test.txt"%int(seg_length), features_test_checked["obsids"])
+
         ltrainfile = open(froot+"_%is_labels_train.txt"%int(seg_length), "w")
         for l in labels_train_checked:
             ltrainfile.write(str(l) + "\n")
@@ -740,6 +750,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
             np.savetxt(froot+"_%is_features_val.txt"%int(seg_length), features_val_checked["features"])
             np.savetxt(froot+"_%is_tstart_val.txt"%int(seg_length), features_val_checked["tstart"])
             np.savetxt(froot+"_%is_nseg_val.txt"%int(seg_length), features_val_checked["nseg"])
+            np.savetxt(froot+"_%is_obsids_val.txt"%int(seg_length), features_val_checked["obsids"])
 
             lvalfile = open(froot+"_%is_labels_val.txt"%int(seg_length), "w")
             for l in labels_val_checked:
