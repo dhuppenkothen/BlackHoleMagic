@@ -3,13 +3,16 @@ import matplotlib.cm as cmap
 import seaborn as sns
 
 import numpy as np
+import itertools
 
 import sklearn.metrics
 
 from collections import Counter
 
 
-def _compute_trans_matrix(labels):
+def _compute_trans_matrix(labels, order="row"):
+
+    print("order: " + order)
     unique_labels = np.unique(labels)
     nlabels = len(unique_labels)
 
@@ -22,20 +25,30 @@ def _compute_trans_matrix(labels):
                                 labels_numerical[1:])).iteritems():
         transmat[x,y] = c
 
-    transmat_p = np.zeros_like(transmat)
-    for i,t in enumerate(transmat):
-        transmat_p[i,:] = t/np.max(t)
-
+    if order == "row":
+        print("I am here!") 
+        transmat_p = transmat/np.sum(transmat, axis=1)
+    elif order == "column": 
+        print("This is column")
+        transmat_p = transmat/np.sum(transmat, axis=0)
+    else:
+        raise Exception("argument to keyword 'order' not recognized!")
+ 
     return unique_labels, transmat, transmat_p
 
 
 
-def transition_matrix(labels, ax=None, log=False):
+def transition_matrix(labels, labels_for_plotting, ax=None, log=False, fig=None, order="column", title="Transition Matrix"):
+    """
+    Plot a transition matrix. 
 
-    if ax is None:
+
+    """
+
+    if ax is None and fig is None:
         fig, ax = plt.subplots(1,1, figsize=(9,9))
 
-    unique_labels, transmat, transmat_p = _compute_trans_matrix(labels)
+    unique_labels, transmat, transmat_p = _compute_trans_matrix(labels, order=order)
 
     if log:
         if np.any(transmat_p == 0):
@@ -43,28 +56,48 @@ def transition_matrix(labels, ax=None, log=False):
                          np.min(transmat_p[np.nonzero(transmat_p)])/10.0
 
         transmat_p = np.log(transmat_p)
+    sns.set_style("white")
 
-    sns.set_style("whitegrid")
     plt.rc("font", size=24, family="serif", serif="Computer Sans")
     plt.rc("axes", titlesize=20, labelsize=20)
     plt.rc("text", usetex=True)
     plt.rc('xtick', labelsize=20)
     plt.rc('ytick', labelsize=20)
 
-    ax.pcolormesh(transmat_p, cmap=cmap.viridis)
+    if log:
+         im = ax.imshow(transmat_p.T, interpolation="nearest", cmap=cmap.Blues, vmin=np.min(transmat_p), vmax=np.max(transmat_p))
+    else:
+         im = ax.imshow(transmat_p.T, interpolation="nearest", cmap=cmap.Blues, vmin=0.0, vmax=np.max(transmat_p))
+    print(transmat_p)
+    ax.set_title(title)
+    fig.colorbar(im)
+
     ax.set_ylabel('Initial state')
     ax.set_xlabel('Final state')
-    ax.set_xticks(np.arange(0.5, 0.5+len(unique_labels), 1.0))
-    ax.set_xticklabels(unique_labels, rotation=70)
-
-    ax.set_yticks(np.arange(0.5, 0.5+len(unique_labels), 1.0))
-    ax.set_yticklabels(unique_labels)
-
-    return ax
 
 
-def confusion_matrix(labels_true, labels_pred, log=False,
-                     ax=None, cm=cmap.viridis):
+    thresh = transmat_p.max() / 2.
+    for i, j in itertools.product(range(transmat_p.shape[0]), range(transmat_p.shape[1])):
+        ax.text(j, i, r"$%.3f$"%transmat_p.T[i, j], fontdict={"size":16},
+                 horizontalalignment="center", verticalalignment="center",
+                 color="white" if transmat_p.T[i, j] > thresh else "black")
+
+#    labels_for_plotting = [r"$\%s$"%l for l in unique_labels]
+
+    tick_marks = np.arange(len(unique_labels))
+    ax.set_xticks(tick_marks)
+    ax.set_xticklabels(labels_for_plotting)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(labels_for_plotting)
+
+
+    return fig, ax
+
+
+def confusion_matrix(labels_true, labels_pred, classes, log=False, normalize=False,
+                     title='Confusion matrix', 
+                     fig=None, ax=None, cmap=cmap.viridis):
+
 
     """
     Plot a confusion matrix between true and predicted labels
@@ -81,6 +114,9 @@ def confusion_matrix(labels_true, labels_pred, log=False,
     log : bool
         Plot original confusion matrix or the log of the confusion matrix?
         Default is False
+  
+    fig : matplotlib.Figure object 
+        A Figure object to plot into
 
     ax : matplotlib.Axes object
         An axes object to plot into
@@ -94,40 +130,66 @@ def confusion_matrix(labels_true, labels_pred, log=False,
         The Axes object with the plot
 
     """
-
-    if ax is None:
+    sns.set_style("white")
+    if ax is None or fig is None:
         fig, ax = plt.subplots(1,1,figsize=(9,6))
 
     unique_labels = np.unique(labels_true)
     confmatrix = sklearn.metrics.confusion_matrix(labels_true, labels_pred, labels=unique_labels)
 
     if log:
-        if np.any(confmatrix == 0):
-            confmatrix = confmatrix + \
-                         np.min(confmatrix[np.nonzero(confmatrix)])/10.0
+        confmatrix = np.log10(confmatrix)
+        cm_mask = np.isfinite(confmatrix) == False
+        confmatrix[cm_mask] = -5.
+        cm_mask_new = confmatrix != -5
+        vmin = np.min(confmatrix[cm_mask_new])-0.3
+        vmax = np.max(confmatrix[cm_mask_new])
+    else:
+        vmin = np.min(confmatrix)
+        vmax = np.max(confmatrix)
 
-        confmatrix = np.log(confmatrix)
-
-    sns.set_style("whitegrid")
     plt.rc("font", size=24, family="serif", serif="Computer Sans")
     plt.rc("axes", titlesize=20, labelsize=20)
     plt.rc("text", usetex=True)
     plt.rc('xtick', labelsize=20)
     plt.rc('ytick', labelsize=20)
 
-    ax.pcolormesh(confmatrix, cmap=cm)
+    #im = ax.pcolormesh(confmatrix, cmap=cmap.viridis, 
+    #                    vmin=vmin, vmax=vmax)
+
+    if ax is None and fig is None:
+        fig, ax = plt.subplots(1,1, figsize=(10, 10))
+    im = ax.imshow(confmatrix, interpolation='nearest', cmap=cmap)
+    ax.set_title(title)
+    fig.colorbar(im)
+    tick_marks = np.arange(len(classes))
+    ax.set_xticks(tick_marks)
+    ax.set_xticklabels(classes)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(classes)
+
+    if normalize:
+        confmatrix = confmatrix.astype('float') / confmatrix.sum(axis=1)[:, np.newaxis]
+        print("Normalized confusion matrix")
+    else:
+        print('Confusion matrix, without normalization')
+
+    print(confmatrix)
+
+    thresh = confmatrix.max() / 2.
+    for i, j in itertools.product(range(confmatrix.shape[0]), range(confmatrix.shape[1])):
+        ax.text(j, i, confmatrix[i, j], fontdict={"size":16},
+                 horizontalalignment="center", verticalalignment="center",
+                 color="white" if confmatrix[i, j] > thresh else "black")
+
+
     ax.set_ylabel('True label')
     ax.set_xlabel('Predicted label')
-    ax.set_xticks(np.arange(0.5, 0.5+len(unique_labels), 1.0))
-    ax.set_xticklabels(unique_labels, rotation=70)
-
-    ax.set_yticks(np.arange(0.5, 0.5+len(unique_labels), 1.0))
-    ax.set_yticklabels(unique_labels)
-
+    plt.tight_layout()
     return ax
 
 
-def scatter(features, labels, ax=None, palette="Set3", alpha=0.8):
+def scatter(features, labels, ax=None, palette="Set3", alpha=0.8, colours=None, ylabel=True):
     """
     Make a scatter plot of dimensions 0 and 1 in features, with scatter
     points coloured by labels.
@@ -186,8 +248,11 @@ def scatter(features, labels, ax=None, palette="Set3", alpha=0.8):
                    features[labels == "None",1],
                    color="grey", alpha=alpha, label="unclassified")
 
-    # now make a color palette:
-    current_palette = sns.color_palette(palette, len(unique_labels))
+    if colours is None:
+        # now make a color palette:
+        current_palette = sns.color_palette(palette, len(unique_labels))
+    else:
+        current_palette = colours
 
     for l, c in zip(unique_labels, current_palette):
         ax.scatter(features[labels == l,0],
@@ -195,7 +260,8 @@ def scatter(features, labels, ax=None, palette="Set3", alpha=0.8):
                    color=c, alpha=alpha, label=l)
 
     ax.set_xlabel("PCA Component 1")
-    ax.set_ylabel("PCA Component 2")
+    if ylabel:
+        ax.set_ylabel("PCA Component 2")
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
     ax.legend(loc="upper right", prop={"size":14})

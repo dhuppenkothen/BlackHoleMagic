@@ -45,13 +45,13 @@ def plot_scores(datadir, scores):
 
 def load_data(datadir, tseg=1024.0, log_features=None, ranking=None):
     features, labels, lc, \
-    hr, tstart = feature_engineering.load_features(datadir, tseg,
+    hr, tstart, nseg = feature_engineering.load_features(datadir, tseg,
                                                    log_features=log_features,
                                                    ranking=ranking)
 
     features_lb, labels_lb, lc_lb, \
-    hr_lb, tstart_lb = feature_engineering.labelled_data(features, labels,
-                                                         lc, hr, tstart)
+    hr_lb, tstart_lb, nseg_lb = feature_engineering.labelled_data(features, labels,
+                                                         lc, hr, tstart, nseg)
 
     fscaled, fscaled_lb = feature_engineering.scale_features(features,
                                                              features_lb)
@@ -61,8 +61,8 @@ def load_data(datadir, tseg=1024.0, log_features=None, ranking=None):
 
     labels_all = np.hstack([labels["train"], labels["val"], labels["test"]])
 
-    return features, labels, lc, hr, tstart, \
-           features_lb, labels_lb, lc_lb, hr_lb, \
+    return features, labels, lc, hr, tstart, nseg, \
+           features_lb, labels_lb, lc_lb, hr_lb, nseg_lb, \
            fscaled, fscaled_lb, fscaled_full, labels_all
 
 class AlgorithmUnrecognizedException(Exception):
@@ -234,10 +234,44 @@ def supervised_validation(fscaled, fscaled_lb, labels, labels_lb, lc_lb,
     print("Test score: " + str(rfc.score(fscaled_test, labels_test)))
 
     # plot the confusion matrix
-    fig, ax = plt.subplots(1,1,figsize=(9,9))
-    ax = plotting.confusion_matrix(labels_val, lpredict_val, log=True, ax=ax)
-    fig.subplots_adjust(bottom=0.15, left=0.15)
+#    fig, ax = plt.subplots(1,1,figsize=(9,9))
+#    ax = plotting.confusion_matrix(labels_val, lpredict_val, log=True, ax=ax)
+#    fig.subplots_adjust(bottom=0.15, left=0.15)
+#    plt.tight_layout()
+
+    fig, ax1 = plt.subplots(1,1, figsize=(10.5,9))
+
+    sns.set_style("whitegrid") 
+    plt.rc("font", size=24, family="serif", serif="Computer Sans")
+    plt.rc("axes", titlesize=20, labelsize=20) 
+    plt.rc("text", usetex=True)
+    plt.rc('xtick', labelsize=20) 
+    plt.rc('ytick', labelsize=20) 
+
+    im = ax1.pcolormesh(log_cm, cmap=cmap.viridis, 
+                        vmin=vmin, vmax=vmax)
+    #ax1.set_title('Confusion matrix')
+    ax1.set_ylabel('True label')
+    ax1.set_xlabel('Predicted label')
+    ax1.set_xticks(np.arange(len(unique_labels))+0.5)
+    ax1.set_xticklabels(unique_labels, rotation=90)
+
+    ax1.set_yticks(np.arange(len(unique_labels))+0.5)
+    ax1.set_yticklabels(unique_labels)
+
+    tick_pos = np.array([2, 5, 10, 20, 50, 100])
+
+    ticks = [0]
+    ticks.extend(np.log10(tick_pos))
+
+    tick_pos = np.hstack([[0], tick_pos])
+    cbar = fig.colorbar(im, ticks=ticks)
+
+    labels = ["%i"%f for f in tick_pos]
+
+    cbar.ax.set_yticklabels(labels);
     plt.tight_layout()
+
     plt.savefig(datadir+namestr+"_cm.pdf", format="pdf")
     plt.close()
 
