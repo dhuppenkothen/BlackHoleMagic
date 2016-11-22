@@ -19,6 +19,7 @@ except:
     import pickle
 
 import linearfilter
+import parameter_estimation as pe
 
 ## set the seed for the random number generator
 ## such that my "random choices" remain reproducible
@@ -27,32 +28,64 @@ from BayesPSD import lightcurve, powerspectrum
 
 #from BayesPSD import lightcurve, powerspectrum
 
-def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25, seed=20160601):
+def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0.25, seed=20160615):
+    """
+    Split data set into train, test and validation sets. 
 
+    Parameters
+    ----------
+    d_all : iterable
+        A list of data segments from the GRS 1915+105 data set
+ 
+    train_frac : float (0,1)
+        Fraction of data to be placed in the training data set
+ 
+    validation_frac : float (0,1)
+        Fraction of data to be placed in the validation data set
 
+    test_frac : float (0,1)
+        Fraction of data to be placed in the test data set
+
+    seed : int
+        Seed for the random number generator shuffling the data before splitting into 
+        train, test and validation sets
+
+    Returns
+    -------
+    d_all_train, d_all_val, d_all_test : iterables
+        The split data set
+
+    """
+   
     np.random.seed(seed)
-
-    print("state: " + str(np.random.get_state()))
 
     ## total number of light curves
     n_lcs = len(d_all)
 
-    ## shuffle list of light curves
-    #np.random.shuffle(d_all)
-
-    #train_frac = 0.5
-    #validation_frac = 0.25
-    #test_frac = 0.25
+    indices = np.arange(len(d_all))
+    np.random.shuffle(indices)
 
     ## let's pull out light curves for three data sets into different variables.
-    d_all_train = d_all[:int(train_frac*n_lcs)]
-    d_all_val = d_all[int(train_frac*n_lcs):int((train_frac + validation_frac)*n_lcs)]
-    d_all_test = d_all[int((train_frac + validation_frac)*n_lcs):]
+    d_all_train = [d_all[i] for i in indices[:int(train_frac*n_lcs)]]
+    d_all_test = [d_all[i] for i in indices[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]]
 
-    ## Let's print some information about the three sets.
-    print("There are %i light curves in the training set."%len(d_all_train))
+    d_all_val = [d_all[i] for i in indices[int((train_frac + test_frac)*n_lcs):]]
+
     print("There are %i light curves in the validation set."%len(d_all_val))
     print("There are %i light curves in the test set."%len(d_all_test))
+
+    states = [d[1] for d in d_all_train]
+    st = pd.Series(states)
+    print("The number of states in the training set is %i"%len(st.value_counts()))
+
+    states = [d[1] for d in d_all_test]
+    st = pd.Series(states)
+    print("The number of states in the test set is %i"%len(st.value_counts()))
+
+    states = [d[1] for d in d_all_val]
+    st = pd.Series(states)
+    print("The number of states in the validation set is %i"%len(st.value_counts()))
+
     for da,n in zip([d_all_train, d_all_val, d_all_test], ["training", "validation", "test"]):
         print("These is the distribution of states in the %s set: "%n)
         states = [d[1] for d in da]
@@ -64,21 +97,31 @@ def split_dataset(d_all, train_frac = 0.5, validation_frac = 0.25, test_frac = 0
 
 
 ## This function is also in grs1915_utils.py!
-def extract_segments(d_all, seg_length = 256., overlap=64.):
+def extract_segments(d_all, seg_length = 256., overlap=64., dt=0.125):
     """ Extract light curve segments from a list of light curves.
         Each element in the list is a list with two elements:
         - an array that contains the light curve in three energy bands
         (full, low energies, high energies) and
         - a string containing the state of that light curve.
 
-        The parameters are
-        - seg_length: the length of each segment. Bits of data at the end of a light curve
-        that are smaller than seg_length will not be included.
-        - overlap: This is actually the interval between start times of individual segments,
-        i.e. by default light curves start 64 seconds apart. The actual overlap is
-        seg_length-overlap
+        Parameters
+        ==========
+        seg_length : float
+            The length of each segment. Bits of data at the end of a light curve
+            that are smaller than seg_length will not be included. 
+        
+        overlap : float 
+            This is actually the interval between start times of individual segments,
+            i.e. by default light curves start 64 seconds apart. The actual overlap is 
+            seg_length-overlap
+            
+        dt : float
+            Set the time resolution of the light curve by hand. I allow this because 
+            in the GRS 1915+105 data, there are rounding errors affecting the time 
+            resolution, which in turn affects the length of the segments.
+
     """
-    segments, labels, nsegments = [], [], [] ## labels for labelled data
+    segments, labels, nsegments, obsids = [], [], [], [] ## labels for labelled data
 
     for i,d_seg in enumerate(d_all):
 
@@ -86,6 +129,8 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         data = d_seg[0]
         ## state is a string in the second element of d_seg
         state = d_seg[1]
+        ## obsid
+        obs = d_seg[2]
 
         ## if the length of the light curve is shorter than the
         ## chosen segment length, discard this light curve
@@ -93,19 +138,14 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
         if length < seg_length:
             continue
 
-        ## compute the intervals between adjacent time bins
-        dt_data = data[1:,0] - data[:-1,0]
-
-        dt = np.min(dt_data)
 
         ## compute the number of time bins in a segment
-        nseg = np.round(seg_length/dt)
+        nseg = int(seg_length/dt)
         ## compute the number of time bins to start of next segment
         noverlap = overlap/dt
 
         istart = 0
         iend = nseg
-        j = 0
 
         while iend < len(data):
             if iend-istart != nseg:
@@ -117,24 +157,64 @@ def extract_segments(d_all, seg_length = 256., overlap=64.):
             labels.append(state)
             istart += noverlap
             iend += noverlap
-            j+=1
 
-        nsegments.append(j)
+    	    nsegments.append(i)
+            obsids.append(obs)
 
     ## convert labels to strings so I don't have a weird
     ## combination of None objects and strings
     labels = np.array([str(l) for l in labels])
 
-    return segments, labels, np.array(nsegments)
+    return segments, labels, np.array(nsegments), np.array(obsids)
 
 def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_frac = 0.25,
-                  seg=True, seg_length=1024., overlap = 128., seed=20160601):
+                  seg=True, seg_length=1024., overlap = 128., seed=20160615):
 
+    """
+    Split data into training, test (and validation) sets and make segments of equal duration with 
+    a set overlap.
 
-    #f = open(filename)
-    #d_all = pickle.load(f)
-    #f.close()
+    Parameters
+    ----------
+    d_all : iterable
+        A list of data segments from the GRS 1915+105 data set
+ 
+    val : bool
+        If true, construct a validation set along with training and test sets
 
+    train_frac : float (0,1)
+        Fraction of data to be placed in the training data set
+ 
+    validation_frac : float (0,1)
+        Fraction of data to be placed in the validation data set
+
+    test_frac : float (0,1)
+        Fraction of data to be placed in the test data set
+
+    seg : bool
+        If true, extract segments of equal length from the data
+
+    seg_length : float
+        The duration, in seconds, of each segment
+
+    overlap : float
+        The interval, in seconds, between starting points of each segment
+
+    seed : int
+        Seed for the random number generator shuffling the data before splitting into 
+        train, test and validation sets
+
+    Returns
+    -------
+    [[seg_train, labels_train, nseg_train],
+     [seg_val, labels_val, nseg_val],
+     [seg_test, labels_test, nseg_test]]
+         A list of training, validation and test sets with:
+             * the segments extracted
+             * the class label for each segment
+             * a numeric identifier to match each segment to the observation it came from
+
+    """
     ## print light curve statistics
     print("Number of light curves:  " + str(len(d_all)))
     states = [d[1] for d in d_all]
@@ -148,27 +228,32 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
         d_all_train  = d_all_train + d_all_val
 
     if seg:
-        seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length, overlap=overlap)
-        seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length, overlap=overlap)
+        seg_train, labels_train, nseg_train, obsids_train = extract_segments(d_all_train, seg_length=seg_length, 
+                                                               overlap=overlap, dt=dt)
+        seg_test, labels_test, nseg_test, obsids_test = extract_segments(d_all_test, seg_length=seg_length, 
+                                                            overlap=overlap, dt=dt)
 
         if val:
-            seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length, overlap=overlap)
+            seg_val, labels_val, nseg_val, obsids_val = extract_segments(d_all_val, seg_length=seg_length, 
+                                                             overlap=overlap, dt=dt)
 
 
     else:
         seg_train = [d[0] for d in d_all_train]
         labels_train = [d[1] for d in d_all_train]
         nseg_train = [1 for d in d_all_train]
+        obsids_train = [d[2] for d in d_all_train]
 
         seg_test = [d[0] for d in d_all_test]
         labels_test = [d[1] for d in d_all_test]
         nseg_test = [1 for d in d_all_test]
+        obdsids_test = [d[2] for d in d_all_test]
 
         if val:
             seg_val = [d[0] for d in d_all_val]
             labels_val = [d[1] for d in d_all_val]
             nseg_val = [1 for d in d_all_val]
-
+            obsids_val = [d[2] for d in d_all_val]
 
         ## Let's print some details on the different segment data sets
         print("There are %i segments in the training set."%len(seg_train))
@@ -189,12 +274,12 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
             print("================================================================")
 
     if val:
-        return [[seg_train, labels_train, nseg_train],
-                [seg_val, labels_val, nseg_val],
-                [seg_test, labels_test, nseg_test]]
+        return [[seg_train, labels_train, nseg_train, obsids_train],
+                [seg_val, labels_val, nseg_val, obsids_val],
+                [seg_test, labels_test, nseg_test, obsids_test]]
     else:
-        return [[seg_train, labels_train, nseg_train],
-                [seg_test, labels_test, nseg_test]]
+        return [[seg_train, labels_train, nseg_train, obsids_train],
+                [seg_test, labels_test, nseg_test, obsids_test]]
 
 ######################################################################################################################
 #### FUNCTIONS FOR FEATURE EXTRACTION ################################################################################
@@ -203,6 +288,32 @@ def extract_data(d_all, val=True, train_frac=0.5, validation_frac=0.25, test_fra
 ### FIRST PART: TIME SERIES FEATURES
 
 def timeseries_features(seg):
+    """ 
+    Extract summary features from the time series.
+
+    Parameters:
+    -----------
+    seg : numpy.ndarray
+        A single data segment
+
+    Returns
+    -------
+    fmean : float
+        The mean count rate of the segment
+
+    fmedian : float
+        The median count rate of the segment
+
+    fvar : float
+        The variance in the count rate of the segment
+
+    skew : float
+        The skewness of the count rate of the segment
+ 
+    kurt : float
+        The kurtosis of the count rate of the segment
+
+    """
     counts = seg[:,1]
     fmean = np.mean(counts)
     fmedian = np.median(counts)
@@ -213,7 +324,7 @@ def timeseries_features(seg):
 
 def linear_filter(counts_scaled, k=10, lamb=None):
     """
-    Extract features from a linear filter.
+    Extract features from an autoregressive process.
     :param counts_scaled: numpy ndarray (nsamples, ntimebins) with SCALED TOTAL COUNTS
     :return ww_all: numpy ndarray (nsamples, k) of weights
     """
@@ -235,6 +346,7 @@ def linear_filter(counts_scaled, k=10, lamb=None):
 
 
 ## boundaries for power bands
+## From Heil et al, 2014
 pcb = {"pa_min":0.0039, "pa_max":0.031,
        "pb_min":0.031, "pb_max":0.25,
        "pc_min":0.25, "pc_max":2.0,
@@ -273,11 +385,6 @@ def logbin_periodogram(freq, ps, percent=0.01):
         binfreq.append(binfreq[-1] + df*(1.+percent))
         df = binfreq[-1]-binfreq[-2]
     binps, bin_edges, binno = scipy.stats.binned_statistic(freq, ps, statistic="mean", bins=binfreq)
-    #binfreq = np.logspace(np.log10(freq[0]), np.log10(freq[-1]+epsilon), bins, endpoint=True)
-    #binps, bin_edges, binno = scipy.stats.binned_statistic(freq[1:], ps[1:], 
-    #                                                       statistic="mean", bins=binfreq)
-    #std_ps, bin_edges, binno = scipy.stats.binned_statistic(freq[1:], ps[1:], 
-    #                                                       statistic=np.std, bins=binfreq)
 
     nsamples = np.array([len(binno[np.where(binno == i)[0]]) for i in xrange(np.max(binno))])
     df = np.diff(binfreq)
@@ -298,11 +405,6 @@ def psd_features(seg, pcb):
     dt = np.min(dt)
 
     counts = seg[:,1]*dt
-    #freq, ps = make_psd(seg, navg=1)
-    #if times[-1]-times[0] >= 256.0:
-    #    tlen = (times[-1]-times[0])
-    #    nrebin = np.round(tlen/256.)
-    #    freq, ps = rebin_psd(freq, ps, n=nrebin, type='average')
 
     ps = powerspectrum.PowerSpectrum(times, counts=counts, norm="rms")
     ps.freq = np.array(ps.freq)
@@ -313,7 +415,6 @@ def psd_features(seg, pcb):
     freq = np.array(ps.freq[1:])
     ps = ps.ps[1:]
 
-    #binfreq, binps = total_psd(seg, 24)
     binfreq, binps, nsamples = logbin_periodogram(freq, ps)
 
     bkg = np.mean(binps[-30:])
@@ -378,9 +479,6 @@ def make_psd(segment, navg=1):
 
 epsilon = 1.e-8
 
-
-
-
 def total_psd(seg, bins):
     times = seg[:,0]
     dt = times[1:] - times[:-1]
@@ -393,8 +491,6 @@ def total_psd(seg, bins):
     binps -= bkg
 
     return np.array(binfreq), np.array(binps)
-
-
 
 def compute_hrlimits(hr1, hr2):
     min_hr1 = np.min(hr1)
@@ -458,7 +554,6 @@ def hr_fitting(seg):
         print("NaN in cov")
 
     return mu1, mu2, cov, skew, kurt
-#    return mu_r, sigma1_r, sigma2_r, alpha_r
 
 def hid_maps(seg, bins=30):
     counts = seg[:,1]
@@ -500,6 +595,10 @@ def extract_lc(seg):
 
 
 def psd_pca(seg, n_components=12):
+    """
+    Extract a PCA representation of the light curves
+    """
+    
     freq_all, ps_all, maxfreq_all = [], [], []
     for s in seg:
         times = s[:,0] 
@@ -537,7 +636,7 @@ def psd_pca(seg, n_components=12):
  
     return ps_pca
 
-def make_features(seg, k=10, bins=30, lamb=None,
+def make_features(seg, k=10, bins=30, lamb=None, n=1,
                   hr_summary=True, ps_summary=True, 
                   lc=True, hr=True, hrlimits=None, n_components=3):
     """
@@ -581,7 +680,7 @@ def make_features(seg, k=10, bins=30, lamb=None,
         hr_all = []
 
 
-    ## MAKE FEATURES BASED ON LINEAR FILTER
+    ## MAKE FEATURES BASED ON THE AUTOREGRESSIVE MODEL
 
     ## first, extract the total counts out of each segment
     counts = np.array([s[:,1] for s in seg])
@@ -593,8 +692,13 @@ def make_features(seg, k=10, bins=30, lamb=None,
     # counts_scaled = StandardScaler().fit_transform(counts.T).T
 
     ## transform the counts into a weight vector
-    ww = linear_filter(counts, k=k)
-     
+    rt = pe.RebinTimeseries(n=n, method="average")
+    counts_binned = rt.fit_transform(counts)
+                
+    #print("extracting weights from AR model ...")
+    # weights of the autoregressive model
+    ww = linear_filter(counts_binned, k=k, lamb=lamb)
+ 
     pca = psd_pca(seg, n_components=n_components)
     for s in seg:
 
@@ -604,36 +708,26 @@ def make_features(seg, k=10, bins=30, lamb=None,
         fmean, fmedian, fvar, fskew, fkurt = timeseries_features(s)
         features_temp.extend([fmean, fmedian, np.log(fvar), fskew, fkurt])
 
-
         if ps_summary:
             ## PSD summary features
             maxfreq, psd_a, psd_b, psd_c, psd_d, pc1, pc2 = psd_features(s, pcb)
-            #print("maxfreq: " + str(maxfreq))
             if len(maxfreq) == 0: 
                 features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
             else: 
                 features_temp.extend([np.log(maxfreq), np.log(psd_a), np.log(psd_b), np.log(psd_c), np.log(psd_d), np.log(pc1), np.log(pc2)])
-#                features_temp.extend([psd_a, psd_b, psd_c, psd_d, pc1, pc2])
 
         else:
             ## whole PSD
-            #freq, ps = make_psd(s,navg=navg)
             binfreq, binps = total_psd(s, 24)
             features_temp.extend(binps[1:])
 
 
         if hr_summary:
             mu1, mu2, cov, skew, kurt = hr_fitting(s)
-            #print("len(features): " + str(len(features_temp)))
             features_temp.extend([mu1, mu2])
-            #print(len(features_temp))
             features_temp.extend([np.log(cov[0]), cov[1], np.log(cov[3])])
-            #print(len(features_temp))
             features_temp.extend(list(skew))
-            #print(len(features_temp))
             features_temp.extend(list(kurt))
-            #print(len(features_temp))
-
 
         else:
             xedges, yedges, h = hr_maps(s, bins=bins, hrlimits=hrlimits)
@@ -645,35 +739,35 @@ def make_features(seg, k=10, bins=30, lamb=None,
         if lc or hr:
             lc_temp = extract_lc(s)
         if lc:
-            #print("appending light curve")
             lc_all.append([lc_temp[0], lc_temp[1]])
         if hr:
-            #print("appending hardness ratios")
             hr_all.append([lc_temp[2], lc_temp[3]])
 
     features_all = np.hstack((np.array(features), np.array(ww)))
     features_all = np.hstack((np.array(features_all), np.array(pca)))
 
-    print("I am about to make a dictionary")
     fdict = {"features": features_all}
-    print(fdict.keys)
     if lc:
-        print("I am in lc")
         #features.append(lc_all)
         fdict["lc"] = lc_all
     if hr:
-        print("I am in hr")
         #features.append(hr_all)
         fdict["hr"] = hr_all
-    #print(fdict.keys())
     return fdict
 
 
 def check_nan(features, labels, hr=True, lc=True):
+    """ 
+    Check for NaN values in the features and throw out any 
+    sample that contains NaNs.
+
+    """
+  
     inf_ind = []
-    fnew, lnew, tnew = [], [], []
+    fnew, lnew, tnew, onew = [], [], [], []
 
     nseg = features["nseg"]
+    obsids = features["obsids"]
     nsum = np.array([np.sum(nseg[:i])-1 for i in xrange(1, len(nseg)+1)])
     if lc:
         lcnew = []
@@ -697,6 +791,7 @@ def check_nan(features, labels, hr=True, lc=True):
                 fnew.append(f)
                 lnew.append(labels[i])
                 tnew.append(features["tstart"][i])
+                onew.append(features["obsids"][i])
                 if lc:
                     lcnew.append(features["lc"][i])
                 if hr:
@@ -705,7 +800,7 @@ def check_nan(features, labels, hr=True, lc=True):
             print("f: " + str(f))
             print("type(f): " + str(type(f)))
             raise Exception("This is breaking! Boo!")
-    features_new = {"features":np.array(fnew), "tstart":tnew, "nseg":nseg}
+    features_new = {"features":np.array(fnew), "tstart":tnew, "nseg":nseg, "obsids":onew}
     if lc:
         features_new["lc"] = lcnew
     if hr:
@@ -713,19 +808,21 @@ def check_nan(features, labels, hr=True, lc=True):
     return features_new, lnew
 
 
-
-
-def make_all_features(d_all, k=10, lamb=0.1,
+def make_all_features(d_all, k=10, lamb=0.1, n=1, n_components=1,
                       val=True, train_frac=0.6, validation_frac=0.2, test_frac = 0.2,
-                      seg=True, seg_length=1024., overlap = 64.,
+                      seg=True, seg_length=1024., overlap = 64., dt=0.125,
                       bins=30, navg=4, hr_summary=True, ps_summary=True, lc=True, hr=True,
-                      save_features=True, froot="grs1915", seed=20160601):
+                      save_features=True, froot="grs1915", seed=20160615):
+    """
+    Get out features for the entire data set from start to finish. 
+    Stores the results to disk in separate files for the features, labels, light curves, 
+    hardness ratios, start times and observation identifiers.
+    """
 
-    ## Set the seed to I will always pick out the same light curves.
+    ## Set the seed to I will always pic out the same light curves.
     np.random.seed(seed)
 
     ## shuffle list of light curves
-    #np.random.shuffle(d_all)
     indices = np.arange(len(d_all))
     np.random.shuffle(indices)
 
@@ -735,10 +832,10 @@ def make_all_features(d_all, k=10, lamb=0.1,
     d_all_train = [d_all[i] for i in indices[:int(train_frac*n_lcs)]]
     d_all_test = [d_all[i] for i in indices[int(train_frac*n_lcs):int((train_frac + test_frac)*n_lcs)]]
  
-    seg_train, labels_train, nseg_train = extract_segments(d_all_train, seg_length=seg_length,
-                                                           overlap=overlap)
-    seg_test, labels_test, nseg_test = extract_segments(d_all_test, seg_length=seg_length,
-                                                        overlap=overlap)
+    seg_train, labels_train, nseg_train, obsids_train = extract_segments(d_all_train, seg_length=seg_length,
+                                                           overlap=overlap, dt=dt)
+    seg_test, labels_test, nseg_test, obsids_test = extract_segments(d_all_test, seg_length=seg_length,
+                                                        overlap=overlap, dt=dt)
 
 
     states = [d[1] for d in d_all_train]
@@ -755,8 +852,8 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     if val:
         d_all_val = [d_all[i] for i in indices[int((train_frac + test_frac)*n_lcs):]]
-        seg_val, labels_val, nseg_val = extract_segments(d_all_val, seg_length=seg_length,
-                                                         overlap=overlap)
+        seg_val, labels_val, nseg_val, obsids_val = extract_segments(d_all_val, seg_length=seg_length,
+                                                         overlap=overlap, dt=dt)
         tstart_val = np.array([s[0,0] for s in seg_val])
 
         states = [d[1] for d in d_all_val]
@@ -765,20 +862,18 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
     ### hrlimits are derived from the data, in the GRS1915_DataVisualisation Notebook
     hrlimits = [[-2.5, 1.5], [-3.0, 2.0]]
-
-
-    features_train = make_features(seg_train,k, bins, lamb, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-    features_test = make_features(seg_test,k, bins, lamb,  hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-
+ 
+    features_train = make_features(seg_train, k, bins, lamb, n, hr_summary, ps_summary, lc, hr, hrlimits, n_components)
+    features_test = make_features(seg_test,k, bins, lamb, n,  hr_summary, ps_summary, lc, hr, hrlimits, n_components)
 
     features_train["tstart"] = tstart_train
     features_test["tstart"] = tstart_test
 
     features_train["nseg"] = nseg_train
     features_test["nseg"] = nseg_test
-    #features_train = np.concatenate((tstart_train, features_train))
-    #features_test = np.concatenate((tstart_test, features_test))
 
+    features_train["obsids"] = obsids_train
+    features_test["obsids"] = obsids_test
 
 
     ## check for NaN
@@ -798,11 +893,11 @@ def make_all_features(d_all, k=10, lamb=0.1,
     labelled_features = {"train": [features_train_checked["features"], labels_train_checked],
                      "test": [features_test_checked["features"], labels_test_checked]}
 
-    if val:
-        features_val = make_features(seg_val, k, bins, lamb, hr_summary, ps_summary, lc, hr, hrlimits=hrlimits)
-        #features_val = np.concatenate((tstart_val, features_val))
+    if val: 
+        features_val = make_features(seg_val, k, bins, lamb, n, hr_summary, ps_summary, lc, hr, hrlimits, n_components)
         features_val["tstart"] = tstart_val
         features_val["nseg"] = nseg_val
+        features_val["obsids"] = obsids_val
 
         print("Checking for NaN in the validation set ...")
         features_val_checked, labels_val_checked = check_nan(features_val, labels_val, hr=hr, lc=lc)
@@ -815,6 +910,8 @@ def make_all_features(d_all, k=10, lamb=0.1,
         np.savetxt(froot+"_%is_features_test.txt"%int(seg_length), features_test_checked["features"])
         np.savetxt(froot+"_%is_nseg_train.txt"%int(seg_length), features_train_checked["nseg"])
         np.savetxt(froot+"_%is_nseg_test.txt"%int(seg_length), features_test_checked["nseg"])
+        np.savetxt(froot+"_%is_obsids_train.txt"%int(seg_length), features_train_checked["obsids"])
+        np.savetxt(froot+"_%is_obsids_test.txt"%int(seg_length), features_test_checked["obsids"])
 
         np.savetxt(froot+"_%is_tstart_train.txt"%int(seg_length), features_train_checked["tstart"])
         np.savetxt(froot+"_%is_tstart_test.txt"%int(seg_length), features_test_checked["tstart"])
@@ -834,6 +931,7 @@ def make_all_features(d_all, k=10, lamb=0.1,
             np.savetxt(froot+"_%is_features_val.txt"%int(seg_length), features_val_checked["features"])
             np.savetxt(froot+"_%is_tstart_val.txt"%int(seg_length), features_val_checked["tstart"])
             np.savetxt(froot+"_%is_nseg_val.txt"%int(seg_length), features_val_checked["nseg"])
+            np.savetxt(froot+"_%is_obsids_val.txt"%int(seg_length), features_val_checked["obsids"])
 
             lvalfile = open(froot+"_%is_labels_val.txt"%int(seg_length), "w")
             for l in labels_val_checked:
@@ -859,10 +957,6 @@ def make_all_features(d_all, k=10, lamb=0.1,
             pickle.dump(hr_all, f, -1)
             f.close()
 
-        #f = open(froot+"_features.dat", "w")
-        #pickle.dump(labelled_features, f)
-        #f.close()
-
     return labelled_features
 
 
@@ -873,14 +967,15 @@ def make_all_features(d_all, k=10, lamb=0.1,
 
 def extract_all(d_all, seg_length_all=[256., 1024.], overlap=128.,
                 val=True, train_frac=0.5, validation_frac = 0.25, test_frac = 0.25,
-                k = 10, lamb=0.1, seed=20160601,
+                k = 10, lamb=0.1, n=1, n_components=1, seed=20160615,
                 datadir="./"):
 
     if np.size(overlap) != np.size(seg_length_all):
         overlap = [overlap for i in xrange(len(seg_length_all))]
+ 
 
     for ov, sl in zip(overlap, seg_length_all):
-        lf = make_all_features(d_all, k, lamb, val, train_frac, validation_frac, test_frac,
+        lf = make_all_features(d_all, k, lamb, n, n_components, val, train_frac, validation_frac, test_frac,
                   seg=True, seg_length=sl, overlap=ov,
                   hr_summary=True, ps_summary=True, lc=True, hr=True,
                   save_features=True, froot=datadir+"grs1915", seed=seed)
